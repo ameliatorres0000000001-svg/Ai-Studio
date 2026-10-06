@@ -12,6 +12,28 @@ const variantClasses: Record<BadgeVariant, string> = {
   neutral: "badge-neutral",
 };
 
+/** Brand/logo icon from /public/icons (decorative; the adjacent text carries the meaning). */
+export function BrandIcon({
+  name,
+  size = 18,
+}: {
+  name: "claude" | "telegram" | "supabase" | "plug";
+  size?: number;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/icons/${name}.png`}
+      width={size}
+      height={size}
+      alt=""
+      aria-hidden="true"
+      className="brand-icon"
+      draggable={false}
+    />
+  );
+}
+
 export function Badge({
   variant = "neutral",
   children,

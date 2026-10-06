@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import type { Workspace } from "@/lib/types";
+import type { Deployment } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { Button, Spinner, EmptyState, ErrorState } from "@/components/ui";
 
@@ -15,7 +15,8 @@ export function DiffViewer({
   onCommitted?: () => void;
   compact?: boolean;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const kh = lang === "kh";
   const [diff, setDiff] = useState<string | null>(null);
   const [changedFiles, setChangedFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,9 @@ export function DiffViewer({
   const [rollingBack, setRollingBack] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [vercelReady, setVercelReady] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [deployment, setDeployment] = useState<Deployment | null>(null);
 
   async function loadDiff() {
     setLoading(true);
@@ -43,6 +47,45 @@ export function DiffViewer({
   useEffect(() => {
     loadDiff();
   }, [workspaceId]);
+
+  useEffect(() => {
+    api.health().then((h) => setVercelReady(h.vercel)).catch(() => setVercelReady(false));
+    api
+      .getVercelDeployments(workspaceId)
+      .then(({ deployments }) => setDeployment(deployments[0] || null))
+      .catch(() => {});
+  }, [workspaceId]);
+
+  // Poll while the latest deployment is still building.
+  useEffect(() => {
+    if (!deployment || deployment.status !== "pending") return;
+    const timer = setInterval(() => {
+      api
+        .getVercelDeployments(workspaceId)
+        .then(({ deployments }) => setDeployment(deployments[0] || null))
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [deployment, workspaceId]);
+
+  async function deploy(target: "preview" | "production") {
+    if (
+      target === "production" &&
+      !window.confirm(kh ? "បង្ហោះទៅ Production មែនទេ?" : "Deploy to PRODUCTION?")
+    ) {
+      return;
+    }
+    setDeploying(true);
+    setError(null);
+    try {
+      const { deployment: d } = await api.deployVercel(workspaceId, target);
+      setDeployment({ ...(d as any), platform: "vercel", workspace_id: workspaceId } as Deployment);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setDeploying(false);
+    }
+  }
 
   async function commit() {
     if (!commitMsg.trim()) return;
@@ -141,6 +184,30 @@ export function DiffViewer({
             )}
           </div>
         </>
+      )}
+
+      {vercelReady && (
+        <div className="diff-actions">
+          <Button variant="secondary" onClick={() => deploy("preview")} disabled={deploying || deployment?.status === "pending"}>
+            {deploying ? (kh ? "កំពុងបង្ហោះ..." : "Deploying...") : (kh ? "បង្ហោះ Vercel (Preview)" : "Deploy to Vercel (Preview)")}
+          </Button>
+          <Button variant="ghost" onClick={() => deploy("production")} disabled={deploying || deployment?.status === "pending"}>
+            {kh ? "Production" : "Production"}
+          </Button>
+          {deployment && (
+            <span>
+              {deployment.status === "pending" && (kh ? "កំពុង Build…" : "Building…")}
+              {deployment.status === "success" && (kh ? "ជោគជ័យ " : "Ready ")}
+              {deployment.status === "failed" && (kh ? `បរាជ័យ ${deployment.error || ""}` : `Failed ${deployment.error || ""}`)}
+              {deployment.url && (
+                <>
+                  {" "}
+                  <a href={deployment.url} target="_blank" rel="noreferrer">{deployment.url}</a>
+                </>
+              )}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

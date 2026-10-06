@@ -24,6 +24,7 @@ export function ClaudeChat({
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{
     filesChanged: string[];
+    proposedFiles: { path: string; content: string }[];
     diff: string | null;
     applied: boolean;
   } | null>(null);
@@ -46,6 +47,22 @@ export function ClaudeChat({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  async function applyProposed() {
+    if (!lastResult || lastResult.applied || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Writes exactly what was reviewed; does not call Claude again.
+      await api.applyChanges(workspaceId, lastResult.proposedFiles);
+      setLastResult({ ...lastResult, applied: true });
+      onApplied?.();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function send(apply: boolean = false) {
     if (!input.trim() || loading) return;
@@ -70,7 +87,6 @@ export function ClaudeChat({
       const result = await api.claudeChat(workspaceId, userMsg, {
         currentFile,
         fileContent,
-        apply,
       });
 
       setMessages((prev) => [
@@ -85,12 +101,19 @@ export function ClaudeChat({
       ]);
 
       if (result.filesChanged.length > 0) {
+        let applied = false;
+        if (apply) {
+          // "Edit project": write the files Claude just proposed (no second Claude call).
+          await api.applyChanges(workspaceId, result.proposedFiles);
+          applied = true;
+          onApplied?.();
+        }
         setLastResult({
           filesChanged: result.filesChanged,
+          proposedFiles: result.proposedFiles,
           diff: result.diff,
-          applied: result.applied,
+          applied,
         });
-        if (result.applied) onApplied?.();
       }
     } catch (e: any) {
       setError(e.message);
@@ -157,7 +180,7 @@ export function ClaudeChat({
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <Button onClick={() => send(true)} disabled={loading}>
+          <Button onClick={applyProposed} disabled={loading}>
             {t("applyChanges")}
           </Button>
         </div>
