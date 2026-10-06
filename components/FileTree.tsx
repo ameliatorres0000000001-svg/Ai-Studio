@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { FileNode } from "@/lib/types";
+import { Spinner, ErrorState, EmptyState } from "@/components/ui";
 
 export function FileTree({
   workspaceId,
@@ -50,20 +51,16 @@ export function FileTree({
   }
 
   function renderNode(node: FileNode, depth: number = 0): React.ReactNode {
-    const indent = { paddingLeft: `${depth * 16 + 8}px` };
+    const indent = { paddingLeft: `${depth * 16 + 4}px` };
     if (node.type === "dir") {
       const isOpen = expanded.has(node.path);
       return (
         <div key={node.path}>
-          <button
-            className="tree-row"
-            style={indent}
-            onClick={() => toggle(node.path)}
-          >
-            <span>{isOpen ? "▾" : "▸"}</span> {node.name}/
+          <button className="tree-row" style={indent} onClick={() => toggle(node.path)}>
+            <span className="tree-arrow">{isOpen ? "▾" : "▸"}</span>
+            {node.name}
           </button>
-          {isOpen &&
-            node.children?.map((child) => renderNode(child, depth + 1))}
+          {isOpen && node.children?.map((child) => renderNode(child, depth + 1))}
         </div>
       );
     }
@@ -74,21 +71,18 @@ export function FileTree({
         style={indent}
         onClick={() => openFile(node.path)}
       >
-        <span> </span> {node.name}
+        <span className="tree-arrow">·</span>
+        {node.name}
       </button>
     );
   }
 
-  if (loading) return <p>Loading files...</p>;
-  if (error) return <p style={{ color: "#ff6b6b" }}>{error}</p>;
+  if (loading) return <Spinner label="Loading files..." />;
+  if (error) return <ErrorState message={error} />;
 
-  return (
-    <div className="filetree">
-      {tree.length === 0 ? (
-        <p>No files found</p>
-      ) : (
-        tree.map((node) => renderNode(node))
-      )}
-    </div>
-  );
+  if (tree.length === 0) {
+    return <EmptyState icon="▣" title="No files found" description="This workspace appears to be empty." />;
+  }
+
+  return <div className="filetree">{tree.map((node) => renderNode(node))}</div>;
 }

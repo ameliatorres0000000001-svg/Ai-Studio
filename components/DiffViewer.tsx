@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { Workspace } from "@/lib/types";
+import { Button, Spinner, EmptyState, ErrorState } from "@/components/ui";
 
 export function DiffViewer({
   workspaceId,
@@ -23,6 +24,7 @@ export function DiffViewer({
 
   async function loadDiff() {
     setLoading(true);
+    setError(null);
     try {
       const { diff, changedFiles } = await api.getDiff(workspaceId);
       setDiff(diff);
@@ -72,20 +74,37 @@ export function DiffViewer({
     }
   }
 
-  if (loading) return <p>Loading diff...</p>;
+  if (loading) {
+    return (
+      <div className="diff-viewer">
+        <div className="panel-header"><h3>Git Diff</h3></div>
+        <Spinner label="Loading diff..." />
+      </div>
+    );
+  }
 
   return (
     <div className="diff-viewer">
-      <h3>Git Diff</h3>
-      {error && <p style={{ color: "#ff6b6b" }}>{error}</p>}
-      {success && <p style={{ color: "#42ddb1" }}>{success}</p>}
+      <div className="panel-header">
+        <h3>Git Diff</h3>
+        <Button variant="ghost" className="btn-sm" onClick={loadDiff}>
+          Refresh
+        </Button>
+      </div>
+
+      {error && <ErrorState message={error} />}
+      {success && <div className="success-banner">{success}</div>}
 
       {changedFiles.length === 0 ? (
-        <p>No uncommitted changes. The working tree is clean.</p>
+        <EmptyState
+          icon="="
+          title="Working tree is clean"
+          description="No uncommitted changes. Use Claude to edit files, then check back here to review the diff."
+        />
       ) : (
         <>
           <div className="diff-files">
-            <b>Changed files ({changedFiles.length}):</b>
+            <b>Changed files ({changedFiles.length})</b>
             <ul>
               {changedFiles.map((f) => (
                 <li key={f}>{f}</li>
@@ -101,21 +120,19 @@ export function DiffViewer({
               onChange={(e) => setCommitMsg(e.target.value)}
               placeholder="Commit message..."
               disabled={committing}
+              onKeyDown={(e) => e.key === "Enter" && commit()}
             />
-            <button
-              onClick={commit}
-              disabled={committing || !commitMsg.trim()}
-            >
+            <Button onClick={commit} disabled={committing || !commitMsg.trim()}>
               {committing ? "Pushing..." : "Commit & Push"}
-            </button>
+            </Button>
             {rollbackTag && (
-              <button
+              <Button
+                variant="danger"
                 onClick={rollback}
                 disabled={rollingBack}
-                style={{ background: "#a53030" }}
               >
                 {rollingBack ? "Rolling back..." : "Rollback"}
-              </button>
+              </Button>
             )}
           </div>
         </>

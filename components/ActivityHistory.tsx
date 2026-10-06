@@ -3,6 +3,14 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { Activity } from "@/lib/types";
+import { Spinner, EmptyState } from "@/components/ui";
+
+const STATUS_COLORS: Record<string, string> = {
+  success: "var(--success)",
+  error: "var(--error)",
+  warning: "var(--warning)",
+  info: "var(--text-3)",
+};
 
 export function ActivityHistory({
   workspaceId,
@@ -14,7 +22,6 @@ export function ActivityHistory({
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
       try {
         const { activities } = await api.getActivities(workspaceId);
         setActivities(activities);
@@ -29,27 +36,27 @@ export function ActivityHistory({
     return () => clearInterval(interval);
   }, [workspaceId]);
 
-  const statusColor: Record<string, string> = {
-    success: "#42ddb1",
-    error: "#ff6b6b",
-    warning: "#f5a623",
-    info: "#718aa3",
-  };
-
   return (
     <div className="panel">
-      <h3>Activity History</h3>
+      <div className="panel-header">
+        <h3>Activity History</h3>
+        <span className="badge badge-info">Live</span>
+      </div>
       {loading ? (
-        <p>Loading...</p>
+        <Spinner label="Loading activity..." />
       ) : activities.length === 0 ? (
-        <p>No activity yet. Actions will be logged here.</p>
+        <EmptyState
+          icon="◷"
+          title="No activity yet"
+          description="Actions like cloning, editing, running commands, and committing will be logged here."
+        />
       ) : (
         <div className="activity-list">
           {activities.map((a) => (
             <div key={a.id} className="activity-row">
               <span
                 className="activity-dot"
-                style={{ color: statusColor[a.status] || "#718aa3" }}
+                style={{ color: STATUS_COLORS[a.status] || "var(--text-3)" }}
               >
                 ●
               </span>
@@ -58,7 +65,7 @@ export function ActivityHistory({
                 {a.detail && <small>{a.detail}</small>}
                 <small>{new Date(a.created_at).toLocaleString()}</small>
               </div>
-              <em>{a.type}</em>
+              <span className="activity-type">{a.type}</span>
             </div>
           ))}
         </div>

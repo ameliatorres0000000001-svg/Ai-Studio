@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import type { ChatMessage } from "@/lib/types";
+import { Button, Spinner, EmptyState } from "@/components/ui";
 
 export function ClaudeChat({
   workspaceId,
@@ -87,9 +88,7 @@ export function ClaudeChat({
           diff: result.diff,
           applied: result.applied,
         });
-        if (result.applied) {
-          onApplied?.();
-        }
+        if (result.applied) onApplied?.();
       }
     } catch (e: any) {
       setError(e.message);
@@ -100,18 +99,27 @@ export function ClaudeChat({
 
   return (
     <div className="claude-chat">
-      <h3>AI Assistant (Claude)</h3>
+      <div className="panel-header" style={{ marginBottom: 0 }}>
+        <h3>AI Assistant (Claude)</h3>
+        {currentFile && (
+          <span className="badge badge-neutral" style={{ fontFamily: "var(--font-mono)" }}>
+            {currentFile}
+          </span>
+        )}
+      </div>
+
       <div className="chat-messages" ref={scrollRef}>
         {messages.length === 0 && (
-          <p className="chat-empty">
-            Tell Claude what to change in this project. Try:
+          <div className="chat-empty">
+            <strong>Start a conversation with Claude</strong>
+            Try:
             <br />
-            "Add a Telegram button"
+            &ldquo;Add a Telegram button&rdquo;
             <br />
-            "Explain the main file"
+            &ldquo;Explain the main file&rdquo;
             <br />
-            "Fix the login bug"
-          </p>
+            &ldquo;Fix the login bug&rdquo;
+          </div>
         )}
         {messages.map((m) => (
           <div key={m.id} className={`chat-msg ${m.role}`}>
@@ -119,37 +127,34 @@ export function ClaudeChat({
             <p>{m.content}</p>
           </div>
         ))}
-        {loading && <p className="chat-loading">Claude is thinking...</p>}
+        {loading && (
+          <div className="chat-loading">
+            <div className="spinner" />
+            Claude is thinking...
+          </div>
+        )}
       </div>
 
-      {error && <p className="chat-error">{error}</p>}
+      {error && <div className="chat-error">{error}</div>}
 
       {lastResult && !lastResult.applied && (
         <div className="claude-result">
-          <p>
-            Claude proposes changes to {lastResult.filesChanged.length} file(s):
-          </p>
+          <p>Claude proposes changes to {lastResult.filesChanged.length} file(s):</p>
           <ul>
             {lastResult.filesChanged.map((f) => (
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <button
-            className="wide"
-            onClick={() => send(true)}
-            disabled={loading}
-          >
-            Apply Changes →
-          </button>
+          <Button onClick={() => send(true)} disabled={loading}>
+            Apply Changes
+          </Button>
         </div>
       )}
 
       {lastResult?.applied && (
-        <div className="claude-result applied">
-          <p>
-            Changes applied to {lastResult.filesChanged.length} file(s). Review
-            the diff in the Diff tab, then approve or rollback.
-          </p>
+        <div className="success-banner">
+          Changes applied to {lastResult.filesChanged.length} file(s). Review the
+          diff in the Diff tab, then approve or rollback.
         </div>
       )}
 
@@ -160,21 +165,21 @@ export function ClaudeChat({
         disabled={loading}
       />
       <div className="chat-actions">
-        <button
-          className="wide"
+        <Button
+          variant="secondary"
           onClick={() => send(false)}
           disabled={loading || !input.trim()}
+          className="btn-block"
         >
-          Analyze →
-        </button>
-        <button
-          className="wide"
+          Analyze
+        </Button>
+        <Button
           onClick={() => send(true)}
           disabled={loading || !input.trim()}
-          style={{ marginTop: "6px", background: "#1a8a5e" }}
+          className="btn-block"
         >
-          Edit Project →
-        </button>
+          Edit Project
+        </Button>
       </div>
     </div>
   );
