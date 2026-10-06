@@ -61,7 +61,7 @@ export interface Activity {
 
 export interface ChatMessage {
   id: string;
-  user_id: string;
+  user_id?: string;
   workspace_id: string;
   role: "user" | "assistant";
   content: string;
@@ -89,6 +89,8 @@ export interface Deployment {
   status: "pending" | "success" | "failed";
   url: string | null;
   error: string | null;
+  external_id?: string | null;
+  target?: "preview" | "production" | null;
   created_at: string;
 }
 
@@ -105,6 +107,22 @@ export interface CommandResult {
   stderr: string;
   exitCode: number | null;
   timedOut: boolean;
+}
+
+/** Telegram connector (optional). "connecting" is a client-side transient state only. */
+export type TelegramState = "not_connected" | "connected" | "error" | "disconnected";
+
+export interface TelegramStatus {
+  state: TelegramState;
+  /** True when TELEGRAM_BOT_TOKEN is set on the server (the value itself is never exposed). */
+  configured: boolean;
+  bot: { id: number; username: string | null; name: string | null } | null;
+  chat: { id: string; title: string | null } | null;
+  connectedAt: string | null;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+  /** Connection metadata could not be read (e.g. migration not applied); treated as not connected. */
+  unavailable?: boolean;
 }
 
 export interface ApiError {

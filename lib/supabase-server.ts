@@ -1,22 +1,30 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import type { Workspace } from "./types";
+
+// SERVER-ONLY. Never import this file from a client component.
 
 let _adminClient: SupabaseClient | null = null;
+
+function getSupabaseUrl(): string | undefined {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+}
 
 export function getSupabaseAdmin(): SupabaseClient {
   if (_adminClient) return _adminClient;
 
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseServiceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = getSupabaseUrl();
+  // The service-role key is mandatory. We deliberately do NOT fall back to the
+  // anon key: that would silently run privileged queries under the wrong role.
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error("Missing Supabase environment variables");
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error(
+      "Missing Supabase server configuration: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required"
+    );
   }
 
-  _adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+  _adminClient = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   return _adminClient;
@@ -31,6 +39,24 @@ export const supabaseAdmin = new Proxy({} as SupabaseClient, {
 export interface AuthUser {
   id: string;
   email: string;
+}
+
+/**
+ * Comma-separated list of emails allowed to use this deployment.
+ * All users share the server's single GITHUB_ACCESS_TOKEN and ANTHROPIC_API_KEY,
+ * so open sign-up must not translate into access to those credentials.
+ * In production an empty list denies everyone (fail closed).
+ */
+function isEmailAllowed(email: string): boolean {
+  const raw = process.env.ALLOWED_USER_EMAILS || "";
+  const allowed = raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowed.length === 0) {
+    return process.env.NODE_ENV !== "production";
+  }
+  return allowed.includes(email.toLowerCase());
 }
 
 export async function getAuthenticatedUser(req: Request): Promise<{
@@ -48,17 +74,16 @@ export async function getAuthenticatedUser(req: Request): Promise<{
     };
   }
 
-  const token = authHeader.replace("Bearer ", "");
+  const token = authHeader.slice("Bearer ".length).trim();
 
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseUrl = getSupabaseUrl();
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return {
       user: null,
       error: NextResponse.json(
-        { error: "Server configuration error" },
+        { error: "Server configuration error: Supabase URL / anon key missing" },
         { status: 500 }
       ),
     };
@@ -83,16 +108,29 @@ export async function getAuthenticatedUser(req: Request): Promise<{
     };
   }
 
-  return {
-    user: { id: user.id, email: user.email || "" },
-    error: null,
-  };
+  const email = user.email || "";
+  if (!isEmailAllowed(email)) {
+    return {
+      user: null,
+      error: NextResponse.json(
+        {
+          error:
+            "This account is not authorised for this deployment. The server admin must add the email to ALLOWED_USER_EMAILS.",
+          forbidden: true,
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { user: { id: user.id, email }, error: null };
 }
 
+/** Fetch a workspace row only if it belongs to the user. */
 export async function getOwnedWorkspace(
   workspaceId: string,
   userId: string
-): Promise<{ workspace: any | null; error: NextResponse | null }> {
+): Promise<{ workspace: Workspace | null; error: NextResponse | null }> {
   const { data: ws, error } = await supabaseAdmin
     .from("workspaces")
     .select("*")
@@ -110,5 +148,12 @@ export async function getOwnedWorkspace(
     };
   }
 
-  return { workspace: ws, error: null };
+  return { workspace: ws as Workspace, error: null };
+}
+
+/** Remove server-internal fields before sending a workspace to the browser. */
+export function toPublicWorkspace(ws: Workspace): Omit<Workspace, "local_path"> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { local_path, ...rest } = ws;
+  return rest;
 }

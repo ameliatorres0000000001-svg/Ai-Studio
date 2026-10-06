@@ -1,10 +1,12 @@
 import type {
   GitHubRepo,
   Workspace,
+  Deployment,
   FileNode,
   Activity,
   ChatMessage,
   CommandResult,
+  TelegramStatus,
 } from "./types";
 import { supabase } from "./supabase-client";
 
@@ -31,6 +33,9 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     if (data.authRequired) {
       throw new Error("AUTH_REQUIRED");
     }
+    if (data.syncRequired) {
+      throw new Error(data.error || "Workspace must be synced again");
+    }
     throw new Error(data.error || `Request failed (${res.status})`);
   }
   return data as T;
@@ -49,10 +54,10 @@ export const api = {
 
   githubRepos: () => fetchJson<{ repos: GitHubRepo[] }>("/api/github/repos"),
 
-  syncRepo: (repoFullName: string) =>
-    fetchJson<{ workspace: Workspace }>("/api/workspace/sync", {
+  syncRepo: (repoFullName: string, force = false) =>
+    fetchJson<{ workspace: Workspace; canPush?: boolean }>("/api/workspace/sync", {
       method: "POST",
-      body: JSON.stringify({ repoFullName }),
+      body: JSON.stringify({ repoFullName, force }),
     }),
 
   listWorkspaces: () =>
@@ -74,7 +79,7 @@ export const api = {
     ),
 
   commit: (workspaceId: string, message: string) =>
-    fetchJson<{ success: boolean; backupTag: string }>(
+    fetchJson<{ success: boolean; backupTag: string; branch?: string; commit?: string }>(
       "/api/workspace/commit",
       { method: "POST", body: JSON.stringify({ workspaceId, message }) }
     ),
@@ -91,14 +96,50 @@ export const api = {
       body: JSON.stringify({ workspaceId, command }),
     }),
 
+  health: () =>
+    fetchJson<{ github: boolean; claude: boolean; supabase: boolean; vercel: boolean }>(
+      "/api/health"
+    ),
+
+  deployVercel: (
+    workspaceId: string,
+    target: "preview" | "production" = "preview"
+  ) =>
+    fetchJson<{ deployment: { id: string; status: Deployment["status"]; url: string | null; target: string } }>(
+      "/api/deploy/vercel",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          workspaceId,
+          target,
+          confirmProduction: target === "production",
+        }),
+      }
+    ),
+
+  getVercelDeployments: (workspaceId: string) =>
+    fetchJson<{ deployments: Deployment[] }>(
+      `/api/deploy/vercel?workspaceId=${workspaceId}`
+    ),
+
+  applyChanges: (
+    workspaceId: string,
+    files: { path: string; content: string }[]
+  ) =>
+    fetchJson<{ applied: boolean; filesChanged: string[] }>(
+      "/api/claude/apply",
+      { method: "POST", body: JSON.stringify({ workspaceId, files }) }
+    ),
+
   claudeChat: (
     workspaceId: string,
     message: string,
-    options?: { currentFile?: string; fileContent?: string; apply?: boolean }
+    options?: { currentFile?: string; fileContent?: string }
   ) =>
     fetchJson<{
       response: string;
       filesChanged: string[];
+      proposedFiles: { path: string; content: string }[];
       diff: string | null;
       applied: boolean;
     }>("/api/claude/chat", {
@@ -110,6 +151,23 @@ export const api = {
     fetchJson<{ messages: ChatMessage[] }>(
       `/api/claude/messages?workspaceId=${workspaceId}`
     ),
+
+  // Optional Telegram connector. The bot token is server-side only and never passes through here.
+  telegramStatus: () => fetchJson<TelegramStatus>("/api/telegram/status"),
+
+  telegramConnect: (chatId?: string) =>
+    fetchJson<TelegramStatus>("/api/telegram/connect", {
+      method: "POST",
+      body: JSON.stringify({ chatId: chatId || undefined }),
+    }),
+
+  telegramTest: () =>
+    fetchJson<TelegramStatus & { sentToChat?: boolean }>("/api/telegram/test", {
+      method: "POST",
+    }),
+
+  telegramDisconnect: () =>
+    fetchJson<TelegramStatus>("/api/telegram/disconnect", { method: "POST" }),
 
   getActivities: (workspaceId?: string) =>
     fetchJson<{ activities: Activity[] }>(
