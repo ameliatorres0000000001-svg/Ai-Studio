@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase-client";
 import type { Workspace } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { RepoSelector } from "@/components/RepoSelector";
@@ -11,16 +12,17 @@ import { ClaudeChat } from "@/components/ClaudeChat";
 import { ActivityHistory } from "@/components/ActivityHistory";
 import { DiffViewer } from "@/components/DiffViewer";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
+import { TelegramConnector } from "@/components/TelegramConnector";
 import { BottomPanel } from "@/components/BottomPanel";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Button, StatusBadge, EmptyState } from "@/components/ui";
+import { Button, StatusBadge, EmptyState, BrandIcon } from "@/components/ui";
 
 type Tab = "Dashboard" | "Projects" | "Workspace" | "Settings";
 
-const NAV_ITEMS: { id: Tab; icon: string; labelKey: "dashboard" | "projects" | "workspace" | "settings" }[] = [
+const NAV_ITEMS: { id: Tab; icon: string; labelKey: "dashboard" | "projects" | "workspace" | "settings"; needsWorkspace?: boolean }[] = [
   { id: "Dashboard", icon: "▣", labelKey: "dashboard" },
   { id: "Projects", icon: "◉", labelKey: "projects" },
-  { id: "Workspace", icon: "▸", labelKey: "workspace" },
+  { id: "Workspace", icon: "▸", labelKey: "workspace", needsWorkspace: true },
   { id: "Settings", icon: "⚙", labelKey: "settings" },
 ];
 
@@ -104,7 +106,7 @@ export default function Home() {
 
       <aside>
         <div className="sidebar-brand">
-          <div className="sidebar-brand-mark">C</div>
+          <div className="sidebar-brand-mark"><BrandIcon name="claude" size={32} /></div>
           <div>
             <div className="sidebar-brand-name">{t("productName")}</div>
             <div className="sidebar-brand-sub">{t("subtitle")}</div>
@@ -156,6 +158,9 @@ export default function Home() {
             <span className={lang === "kh" ? "lang-active" : ""}>ខ្មែរ</span>
             <span className="lang-sep">|</span>
             <span className={lang === "en" ? "lang-active" : ""}>EN</span>
+          </button>
+          <button className="lang-switch" onClick={() => supabase.auth.signOut()} style={{ marginTop: 8 }}>
+            <span>{lang === "kh" ? "ចាកចេញ" : "Sign out"}</span>
           </button>
         </div>
       </aside>
@@ -264,12 +269,16 @@ function DashboardView({
   setTab: (t: Tab) => void;
 }) {
   const { t, lang } = useLang();
+  const [health, setHealth] = useState<{ claude: boolean; supabase: boolean; vercel: boolean } | null>(null);
+  useEffect(() => {
+    api.health().then(setHealth).catch(() => setHealth(null));
+  }, []);
 
   const statuses = [
     { label: t("githubStatus"), status: githubStatus?.configured ? "connected" : "disconnected", customLabel: githubStatus?.configured ? `${t("connectedAs")} ${githubStatus.username}` : t("notConnected") },
-    { label: t("claudeStatus"), status: "disconnected", customLabel: t("notConnected") },
-    { label: t("supabaseStatus"), status: "connected", customLabel: t("connected_") },
-    { label: t("deployStatus"), status: "disconnected", customLabel: lang === "kh" ? "Vercel/Railway មិនបានភ្ជាប់" : "Vercel/Railway not connected" },
+    { label: t("claudeStatus"), status: health?.claude ? "connected" : "disconnected", customLabel: health?.claude ? t("connected_") : t("notConnected") },
+    { label: t("supabaseStatus"), status: health?.supabase ? "connected" : "disconnected", customLabel: health?.supabase ? t("connected_") : t("notConnected") },
+    { label: t("deployStatus"), status: health?.vercel ? "connected" : "disconnected", customLabel: health?.vercel ? "Vercel" : (lang === "kh" ? "Vercel មិនបានភ្ជាប់" : "Vercel not connected") },
   ];
 
   return (
@@ -534,7 +543,7 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
       </div>
 
       <div className="settings-section">
-        <h4>{t("claudeSetting")}</h4>
+        <h4><BrandIcon name="claude" /> {t("claudeSetting")}</h4>
         <p>Status: <StatusBadge status="disconnected" /></p>
         <div className="setup-box">
           <p>Get an API key from console.anthropic.com and set <code>ANTHROPIC_API_KEY</code> in your <code>.env</code> file.</p>
@@ -542,8 +551,13 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
       </div>
 
       <div className="settings-section">
-        <h4>{t("supabaseSetting")}</h4>
+        <h4><BrandIcon name="supabase" /> {t("supabaseSetting")}</h4>
         <p>Status: <StatusBadge status="connected" /></p>
+      </div>
+
+      <div className="settings-section">
+        <h4><BrandIcon name="plug" /> Connectors / Integrations</h4>
+        <TelegramConnector />
       </div>
 
       <div className="settings-section">
@@ -567,6 +581,9 @@ VERCEL_TOKEN=
 
 # Railway (server/bot deployment)
 RAILWAY_TOKEN=
+
+# Telegram connector (optional, server-side only)
+TELEGRAM_BOT_TOKEN=
 
 # Supabase (auto-configured)
 NEXT_PUBLIC_SUPABASE_URL=...

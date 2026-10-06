@@ -1,5 +1,6 @@
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
+import { AuthGate } from "@/components/AuthGate";
 
 export const metadata = {
   title: "Claude Code Studio",
@@ -20,7 +21,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          <AuthGate>{children}</AuthGate>
+        </LanguageProvider>
       </body>
     </html>
   );
