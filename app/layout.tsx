@@ -1,0 +1,1 @@
+import "./globals.css"; export const metadata={title:"AI Deploy Studio",description:"GitHub-first AI developer workspace"}; export default function RootLayout({children}:{children:React.ReactNode}){return <html><body>{children}</body></html>}
