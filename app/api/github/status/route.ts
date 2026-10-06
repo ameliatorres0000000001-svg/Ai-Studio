@@ -1,46 +1,53 @@
 import { NextResponse } from "next/server";
-import { isGitHubConfigured, getAuthenticatedUser } from "@/lib/github";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { isGitHubConfigured, getAuthenticatedUser as getGitHubUser } from "@/lib/github";
+import { getAuthenticatedUser, supabaseAdmin } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(req);
+  if (authError) return authError;
+
   if (!isGitHubConfigured()) {
     return NextResponse.json({
       configured: false,
       setupRequired: true,
       envVars: ["GITHUB_ACCESS_TOKEN"],
-      message:
-        "GitHub is not connected. Create a Personal Access Token at https://github.com/settings/tokens with repo scope and set GITHUB_ACCESS_TOKEN in your .env file.",
+      message: "Not connected — Configure in Settings",
     });
   }
 
   try {
-    const user = await getAuthenticatedUser();
+    const ghUser = await getGitHubUser();
 
     const { data: existing } = await supabaseAdmin
       .from("github_connections")
       .select("*")
-      .eq("username", user.login)
+      .eq("user_id", user!.id)
       .maybeSingle();
 
     if (!existing) {
       await supabaseAdmin.from("github_connections").insert({
-        username: user.login,
-        avatar_url: user.avatar_url,
+        user_id: user!.id,
+        username: ghUser.login,
+        avatar_url: ghUser.avatar_url,
         last_synced_at: new Date().toISOString(),
       });
     } else {
       await supabaseAdmin
         .from("github_connections")
-        .update({ last_synced_at: new Date().toISOString() })
-        .eq("username", user.login);
+        .update({
+          username: ghUser.login,
+          avatar_url: ghUser.avatar_url,
+          last_synced_at: new Date().toISOString(),
+        })
+        .eq("user_id", user!.id);
     }
 
     return NextResponse.json({
       configured: true,
-      username: user.login,
-      avatar_url: user.avatar_url,
+      username: ghUser.login,
+      avatar_url: ghUser.avatar_url,
     });
   } catch (error: any) {
     return NextResponse.json(

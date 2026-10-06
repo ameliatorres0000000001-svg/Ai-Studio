@@ -1,6 +1,6 @@
-# AI Deploy Studio
+# Claude Code Studio
 
-GitHub-first developer dashboard for managing projects with Claude Code.
+AI Developer Workspace — GitHub-first coding with Claude Code.
 
 ## Run
 
@@ -10,6 +10,18 @@ npm run dev
 ```
 
 Open http://localhost:3000.
+
+## Features
+
+- **GitHub Integration** — Browse and clone your repositories
+- **Claude Code** — AI-powered code analysis, editing, and testing
+- **IDE Workspace** — Three-panel layout with file tree, Claude chat, and code viewer
+- **Terminal** — Run allowlisted commands in an isolated workspace
+- **Git Diff** — Review changes, approve, commit & push, or rollback
+- **Activity Log** — Full audit trail of every action
+- **Command Palette** — Press Ctrl+K for quick navigation
+- **Bilingual UI** — Khmer (KH) and English (EN), defaults to Khmer
+- **Responsive** — Works on desktop, tablet, and mobile
 
 ## Setup
 
@@ -21,20 +33,17 @@ cp .env.example .env
 
 2. **GitHub**: Create a Personal Access Token at https://github.com/settings/tokens with `repo` scope. Set `GITHUB_ACCESS_TOKEN`.
 
-3. **Claude**: Get an API key from https://console.anthropic.com. Set `ANTHROPIC_API_KEY`.
+3. **Claude Code**: Get an API key from https://console.anthropic.com. Set `ANTHROPIC_API_KEY`.
 
-4. **Supabase**: Already auto-configured (URL, anon key, service role key).
+4. **Vercel** (optional): Create a token at https://vercel.com/account/tokens. Set `VERCEL_TOKEN`.
 
-## How It Works
+5. **Railway** (optional): Create a token at https://railway.app/account/tokens. Set `RAILWAY_TOKEN`.
 
-1. **Connect GitHub** — The dashboard reads your GitHub repositories using a Personal Access Token (server-side only, never exposed to the browser).
-2. **Select a Repository** — Browse your repos and click one to clone it into an isolated server-side workspace.
-3. **Browse Files** — View the project file tree and read any source file.
-4. **Ask Claude** — Send natural language instructions like "Add a Telegram button" or "Explain this file." Claude reads the project file tree and responds. When editing, Claude outputs file changes you can apply.
-5. **Review Diff** — See exactly what changed before committing.
-6. **Approve / Rollback** — Commit and push to GitHub, or rollback to a pre-commit backup tag.
-7. **Run Commands** — Execute allowlisted commands (npm, npx, node, tsc, git, etc.) inside the workspace with live output.
-8. **Activity Log** — Every action is logged to Supabase with timestamps and status.
+6. **Supabase**: Already auto-configured.
+
+## Workflow
+
+GitHub → Select Project → Claude Code → Read/Explain → Edit → Diff → Run/Test → Logs → Approve → Commit/Push → Deploy
 
 ## Architecture
 
@@ -42,51 +51,45 @@ cp .env.example .env
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/github/status` | GET | Check GitHub connection and authenticated user |
+| `/api/github/status` | GET | Check GitHub connection |
 | `/api/github/repos` | GET | List user's repositories |
-| `/api/workspace/sync` | POST | Clone or pull a repository into a workspace |
+| `/api/workspace/sync` | POST | Clone or pull a repository |
 | `/api/workspace/list` | GET | List all synced workspaces |
 | `/api/workspace/files` | GET | Get file tree or file content |
 | `/api/workspace/diff` | GET | Get uncommitted git diff |
-| `/api/workspace/commit` | POST | Commit and push changes (creates backup tag) |
+| `/api/workspace/commit` | POST | Commit and push changes |
 | `/api/workspace/rollback` | POST | Rollback to a backup tag |
-| `/api/workspace/run` | POST | Run an allowlisted command in the workspace |
-| `/api/claude/chat` | POST | Send a message to Claude with project context |
-| `/api/claude/messages` | GET | Get chat history for a workspace |
+| `/api/workspace/run` | POST | Run an allowlisted command |
+| `/api/claude/chat` | POST | Send a message to Claude Code |
+| `/api/claude/messages` | GET | Get chat history |
 | `/api/activities` | GET | Get activity log |
 
 ### Database (Supabase)
 
 | Table | Purpose |
 |-------|---------|
-| `github_connections` | GitHub connection metadata (tokens stay in env vars) |
+| `github_connections` | GitHub connection metadata |
 | `workspaces` | Cloned repository working areas |
 | `activities` | Append-only audit log |
 | `chat_messages` | Claude conversation history |
 
 ### Security
 
-- **No secrets in the browser** — GitHub tokens and Anthropic API keys are server-side only (environment variables).
-- **Command allowlist** — Only `npm`, `npx`, `node`, `yarn`, `pnpm`, `tsc`, `eslint`, `prettier`, `git`, `cat`, `ls`, `test` can run. Shell chaining (`;`, `&&`, `|`), `sudo`, `rm -rf`, `eval`, and other dangerous patterns are blocked.
-- **Workspace isolation** — Commands only run inside the selected project's workspace directory. No filesystem access outside it.
-- **Command timeouts** — All commands have a 120-second timeout.
-- **Backup tags** — Every commit creates a git tag for rollback.
-- **RLS enabled** on all database tables.
+- All secrets stay server-side (environment variables)
+- Command allowlist with blocked patterns (no sudo, rm -rf, eval, shell chaining)
+- Workspace isolation — commands run only inside the selected project
+- 120-second command timeout
+- RLS enabled on all database tables
+- Backup tags for rollback before every commit
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `GITHUB_ACCESS_TOKEN` | Yes | GitHub Personal Access Token (repo scope) |
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude Code |
+| `VERCEL_TOKEN` | Optional | Vercel API token for web deployment |
+| `RAILWAY_TOKEN` | Optional | Railway API token for server/bot deployment |
 | `NEXT_PUBLIC_SUPABASE_URL` | Auto | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Auto | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Auto | Supabase service role key |
-
-## Remaining Integration Steps
-
-- **GitHub OAuth**: Currently uses Personal Access Tokens. For multi-user support, implement OAuth flow with `@octokit/oauth-app`.
-- **Deployment integration**: Connect Vercel/Railway APIs for one-click deploys.
-- **Telegram Bot**: Add bot management and notification webhooks.
-- **Real-time streaming**: Use Server-Sent Events or WebSocket for streaming Claude responses and terminal output.
-- **Container isolation**: Use Docker containers per workspace for stronger isolation.

@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import type { ChatMessage } from "@/lib/types";
-import { Button, Spinner, EmptyState } from "@/components/ui";
+import { useLang } from "@/lib/i18n";
+import { Button, EmptyState } from "@/components/ui";
 
 export function ClaudeChat({
   workspaceId,
@@ -16,6 +17,7 @@ export function ClaudeChat({
   fileContent?: string;
   onApplied?: () => void;
 }) {
+  const { t, lang } = useLang();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -99,38 +101,48 @@ export function ClaudeChat({
 
   return (
     <div className="claude-chat">
-      <div className="panel-header" style={{ marginBottom: 0 }}>
-        <h3>AI Assistant (Claude)</h3>
-        {currentFile && (
+      <div className="chat-header">
+        <div className="chat-header-info">
+          <span className="chat-header-icon">✦</span>
+          <span className="chat-header-title">{t("aiAssistant")}</span>
+        </div>
+        <div className="chat-header-status">
+          <span className={`claude-status-dot ${loading ? "thinking" : "idle"}`} />
+          <small>{loading ? t("claudeThinking") : (lang === "kh" ? "រួចរាល់" : "Ready")}</small>
+        </div>
+      </div>
+
+      {currentFile && (
+        <div className="chat-context-file">
           <span className="badge badge-neutral" style={{ fontFamily: "var(--font-mono)" }}>
             {currentFile}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="chat-messages" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="chat-empty">
-            <strong>Start a conversation with Claude</strong>
-            Try:
+            <strong>{t("startConversation")}</strong>
+            {t("tryExamples")}
             <br />
-            &ldquo;Add a Telegram button&rdquo;
+            &ldquo;{t("example1")}&rdquo;
             <br />
-            &ldquo;Explain the main file&rdquo;
+            &ldquo;{t("example2")}&rdquo;
             <br />
-            &ldquo;Fix the login bug&rdquo;
+            &ldquo;{t("example3")}&rdquo;
           </div>
         )}
         {messages.map((m) => (
           <div key={m.id} className={`chat-msg ${m.role}`}>
-            <small>{m.role === "user" ? "You" : "Claude"}</small>
+            <small>{m.role === "user" ? (lang === "kh" ? "អ្នក" : "You") : "Claude"}</small>
             <p>{m.content}</p>
           </div>
         ))}
         {loading && (
           <div className="chat-loading">
             <div className="spinner" />
-            Claude is thinking...
+            {t("claudeThinking")}
           </div>
         )}
       </div>
@@ -139,29 +151,28 @@ export function ClaudeChat({
 
       {lastResult && !lastResult.applied && (
         <div className="claude-result">
-          <p>Claude proposes changes to {lastResult.filesChanged.length} file(s):</p>
+          <p>{t("proposeChanges")} {lastResult.filesChanged.length} {t("filesChanged")}:</p>
           <ul>
             {lastResult.filesChanged.map((f) => (
               <li key={f}>{f}</li>
             ))}
           </ul>
           <Button onClick={() => send(true)} disabled={loading}>
-            Apply Changes
+            {t("applyChanges")}
           </Button>
         </div>
       )}
 
       {lastResult?.applied && (
         <div className="success-banner">
-          Changes applied to {lastResult.filesChanged.length} file(s). Review the
-          diff in the Diff tab, then approve or rollback.
+          {t("changesApplied")} {lastResult.filesChanged.length} {t("filesChanged")}. {t("reviewDiff")}
         </div>
       )}
 
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="e.g. Add a Telegram button and keep the current design..."
+        placeholder={t("messagePlaceholder")}
         disabled={loading}
       />
       <div className="chat-actions">
@@ -171,14 +182,14 @@ export function ClaudeChat({
           disabled={loading || !input.trim()}
           className="btn-block"
         >
-          Analyze
+          {t("analyze")}
         </Button>
         <Button
           onClick={() => send(true)}
           disabled={loading || !input.trim()}
           className="btn-block"
         >
-          Edit Project
+          {t("editProject")}
         </Button>
       </div>
     </div>

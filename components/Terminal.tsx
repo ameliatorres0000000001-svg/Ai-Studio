@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import type { CommandResult } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 import { Button, EmptyState } from "@/components/ui";
 
 const QUICK_COMMANDS = [
@@ -13,6 +14,7 @@ const QUICK_COMMANDS = [
 ];
 
 export function Terminal({ workspaceId }: { workspaceId: string }) {
+  const { t } = useLang();
   const [input, setInput] = useState("");
   const [output, setOutput] = useState<
     { cmd: string; result: CommandResult }[]
@@ -43,11 +45,6 @@ export function Terminal({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="terminal">
-      <div className="panel-header">
-        <h3>Terminal</h3>
-        <span className="badge badge-neutral">Workspace sandbox</span>
-      </div>
-
       <div className="terminal-quick">
         {QUICK_COMMANDS.map((q) => (
           <button key={q.cmd} onClick={() => run(q.cmd)} disabled={running}>
@@ -60,8 +57,8 @@ export function Terminal({ workspaceId }: { workspaceId: string }) {
         {output.length === 0 ? (
           <EmptyState
             icon="$"
-            title="Terminal ready"
-            description="Run allowlisted commands inside the workspace. Output will appear here."
+            title={t("terminalReady")}
+            description={t("terminalDesc")}
           />
         ) : (
           output.map((entry, i) => (
@@ -74,7 +71,7 @@ export function Terminal({ workspaceId }: { workspaceId: string }) {
                 <pre className="terminal-stderr">{entry.result.stderr}</pre>
               )}
               <div className="terminal-exit">
-                Exit: {entry.result.exitCode}
+                {t("exit")}: {entry.result.exitCode}
                 {entry.result.timedOut ? " (timed out)" : ""}
               </div>
             </div>
@@ -83,7 +80,7 @@ export function Terminal({ workspaceId }: { workspaceId: string }) {
         {running && (
           <div className="terminal-running">
             <div className="spinner" />
-            Running...
+            {t("running")}
           </div>
         )}
       </div>
@@ -95,17 +92,14 @@ export function Terminal({ workspaceId }: { workspaceId: string }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && run()}
-          placeholder="Enter a command (npm, npx, node, git, tsc...)"
+          placeholder="npm, npx, node, git, tsc..."
           disabled={running}
         />
         <Button onClick={() => run()} disabled={running || !input.trim()}>
-          Run
+          {t("run")}
         </Button>
       </div>
-      <small className="terminal-note">
-        Only allowlisted commands run inside the workspace. No shell chaining,
-        sudo, rm -rf, or eval.
-      </small>
+      <small className="terminal-note">{t("onlyAllowlisted")}</small>
     </div>
   );
 }

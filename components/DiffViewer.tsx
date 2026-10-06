@@ -3,15 +3,19 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { Workspace } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 import { Button, Spinner, EmptyState, ErrorState } from "@/components/ui";
 
 export function DiffViewer({
   workspaceId,
   onCommitted,
+  compact,
 }: {
   workspaceId: string;
   onCommitted?: () => void;
+  compact?: boolean;
 }) {
+  const { t } = useLang();
   const [diff, setDiff] = useState<string | null>(null);
   const [changedFiles, setChangedFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +52,7 @@ export function DiffViewer({
     try {
       const { backupTag } = await api.commit(workspaceId, commitMsg);
       setRollbackTag(backupTag);
-      setSuccess(`Committed and pushed. Backup tag: ${backupTag}`);
+      setSuccess(`${t("committed")} ${backupTag}`);
       setCommitMsg("");
       onCommitted?.();
       loadDiff();
@@ -65,7 +69,7 @@ export function DiffViewer({
     setError(null);
     try {
       await api.rollback(workspaceId, rollbackTag);
-      setSuccess(`Rolled back to ${rollbackTag}`);
+      setSuccess(`${t("rolledBack")} ${rollbackTag}`);
       loadDiff();
     } catch (e: any) {
       setError(e.message);
@@ -77,20 +81,21 @@ export function DiffViewer({
   if (loading) {
     return (
       <div className="diff-viewer">
-        <div className="panel-header"><h3>Git Diff</h3></div>
-        <Spinner label="Loading diff..." />
+        <Spinner label={t("loadingDiff")} />
       </div>
     );
   }
 
   return (
     <div className="diff-viewer">
-      <div className="panel-header">
-        <h3>Git Diff</h3>
-        <Button variant="ghost" className="btn-sm" onClick={loadDiff}>
-          Refresh
-        </Button>
-      </div>
+      {!compact && (
+        <div className="panel-header">
+          <h3>{t("gitDiff")}</h3>
+          <Button variant="ghost" className="btn-sm" onClick={loadDiff}>
+            {t("refresh")}
+          </Button>
+        </div>
+      )}
 
       {error && <ErrorState message={error} />}
       {success && <div className="success-banner">{success}</div>}
@@ -98,13 +103,13 @@ export function DiffViewer({
       {changedFiles.length === 0 ? (
         <EmptyState
           icon="="
-          title="Working tree is clean"
-          description="No uncommitted changes. Use Claude to edit files, then check back here to review the diff."
+          title={t("workingTreeClean")}
+          description={t("cleanDesc")}
         />
       ) : (
         <>
           <div className="diff-files">
-            <b>Changed files ({changedFiles.length})</b>
+            <b>{t("changedFiles")} ({changedFiles.length})</b>
             <ul>
               {changedFiles.map((f) => (
                 <li key={f}>{f}</li>
@@ -118,12 +123,12 @@ export function DiffViewer({
               type="text"
               value={commitMsg}
               onChange={(e) => setCommitMsg(e.target.value)}
-              placeholder="Commit message..."
+              placeholder={t("commitMsg")}
               disabled={committing}
               onKeyDown={(e) => e.key === "Enter" && commit()}
             />
             <Button onClick={commit} disabled={committing || !commitMsg.trim()}>
-              {committing ? "Pushing..." : "Commit & Push"}
+              {committing ? t("pushing") : t("commitPush")}
             </Button>
             {rollbackTag && (
               <Button
@@ -131,7 +136,7 @@ export function DiffViewer({
                 onClick={rollback}
                 disabled={rollingBack}
               >
-                {rollingBack ? "Rolling back..." : "Rollback"}
+                {rollingBack ? t("rollingBack") : t("rollback")}
               </Button>
             )}
           </div>

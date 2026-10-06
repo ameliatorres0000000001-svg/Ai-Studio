@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import type { GitHubRepo, Workspace } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 import { Button, Spinner, ErrorState, EmptyState } from "@/components/ui";
 
 export function RepoSelector({
@@ -10,6 +11,7 @@ export function RepoSelector({
 }: {
   onSelect: (ws: Workspace) => void;
 }) {
+  const { t, lang } = useLang();
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
@@ -47,13 +49,13 @@ export function RepoSelector({
     return (
       <div className="panel">
         <div className="panel-header">
-          <h3>GitHub Repositories</h3>
+          <h3>{lang === "kh" ? "ឃ្លាំងសម្ងាត់ GitHub" : "GitHub Repositories"}</h3>
         </div>
         <EmptyState
           icon="◉"
-          title="Connect your GitHub account"
-          description="Load your repositories to select one for Claude to work on."
-          action={<Button onClick={loadRepos}>Load Repositories</Button>}
+          title={lang === "kh" ? "ភ្ជាប់គណនី GitHub" : "Connect your GitHub account"}
+          description={lang === "kh" ? "ផ្ទុកឃ្លាំងសម្ងាត់របស់អ្នកដើម្បីជ្រើសរើសមួយឲ្យ Claude ធ្វើការ។" : "Load your repositories to select one for Claude to work on."}
+          action={<Button onClick={loadRepos}>{t("loadRepos")}</Button>}
         />
       </div>
     );
@@ -63,9 +65,9 @@ export function RepoSelector({
     return (
       <div className="panel">
         <div className="panel-header">
-          <h3>GitHub Repositories</h3>
+          <h3>{lang === "kh" ? "ឃ្លាំងសម្ងាត់ GitHub" : "GitHub Repositories"}</h3>
         </div>
-        <Spinner label="Loading repositories..." />
+        <Spinner label={t("loadingRepos")} />
       </div>
     );
   }
@@ -74,11 +76,11 @@ export function RepoSelector({
     return (
       <div className="panel">
         <div className="panel-header">
-          <h3>GitHub Repositories</h3>
+          <h3>{lang === "kh" ? "ឃ្លាំងសម្ងាត់ GitHub" : "GitHub Repositories"}</h3>
         </div>
         <ErrorState message={error} />
         <div style={{ marginTop: 12 }}>
-          <Button variant="secondary" onClick={loadRepos}>Try Again</Button>
+          <Button variant="secondary" onClick={loadRepos}>{t("tryAgain")}</Button>
         </div>
       </div>
     );
@@ -87,15 +89,14 @@ export function RepoSelector({
   return (
     <div className="panel">
       <div className="panel-header">
-        <h3>GitHub Repositories</h3>
+        <h3>{lang === "kh" ? "ឃ្លាំងសម្ងាត់ GitHub" : "GitHub Repositories"}</h3>
         <Button variant="secondary" onClick={loadRepos} className="btn-sm">
-          Refresh
+          {t("refresh")}
         </Button>
       </div>
       <p style={{ marginBottom: 14 }}>
-        Select a repository to clone and manage with Claude.
+        {lang === "kh" ? "ជ្រើសរើសឃ្លាំងសម្ងាត់ដើម្បី clone និងគ្រប់គ្រងជាមួយ Claude។" : "Select a repository to clone and manage with Claude."}
       </p>
-      {error && <div style={{ marginBottom: 12 }}><ErrorState message={error} /></div>}
       <div className="projectgrid">
         {repos.map((repo) => (
           <button
@@ -109,10 +110,10 @@ export function RepoSelector({
             <small>{repo.full_name}</small>
             <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
               {repo.language && <em>{repo.language}</em>}
-              <small>{repo.private ? "Private" : "Public"}</small>
+              <small>{repo.private ? t("private") : t("public")}</small>
             </div>
             {syncing === repo.full_name && (
-              <small style={{ color: "var(--info)" }}>Cloning...</small>
+              <small style={{ color: "var(--info)" }}>{t("cloning")}</small>
             )}
           </button>
         ))}

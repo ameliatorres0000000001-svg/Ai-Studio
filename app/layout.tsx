@@ -1,1 +1,27 @@
-import "./globals.css"; export const metadata={title:"AI Deploy Studio",description:"GitHub-first AI developer workspace"}; export default function RootLayout({children}:{children:React.ReactNode}){return <html><body>{children}</body></html>}
+import "./globals.css";
+import { LanguageProvider } from "@/lib/i18n";
+
+export const metadata = {
+  title: "Claude Code Studio",
+  description: "AI Developer Workspace — GitHub-first coding with Claude Code",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="km">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Noto+Sans+Khmer:wght@400;600&display=swap"
+        />
+      </head>
+      <body>
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
+    </html>
+  );
+}

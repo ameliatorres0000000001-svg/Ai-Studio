@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { getAuthenticatedUser, getOwnedWorkspace } from "@/lib/supabase-server";
 import { commitAndPush, createBackup } from "@/lib/workspace";
 import { logActivity } from "@/lib/activities";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(req);
+  if (authError) return authError;
+  const userId = user!.id;
+
   try {
     const { workspaceId, message } = await req.json();
 
@@ -16,29 +20,21 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: ws, error } = await supabaseAdmin
-      .from("workspaces")
-      .select("*")
-      .eq("id", workspaceId)
-      .maybeSingle();
+    const { workspace, error: wsError } = await getOwnedWorkspace(workspaceId, userId);
+    if (wsError) return wsError;
 
-    if (error || !ws) {
-      return NextResponse.json(
-        { error: "Workspace not found" },
-        { status: 404 }
-      );
-    }
+    const backupTag = await createBackup(workspace.local_path, "precommit");
+    await commitAndPush(workspace.local_path, message);
 
-    const backupTag = await createBackup(ws.local_path, "precommit");
-    await commitAndPush(ws.local_path, message);
-
-    await logActivity(
+    await logActivity({
+      userId,
       workspaceId,
-      "commit",
-      `Committed and pushed: ${message}`,
-      `Backup tag: ${backupTag}`,
-      "success"
-    );
+      type: "commit",
+      action: "git_commit_push",
+      title: `Committed and pushed: ${message}`,
+      detail: `Backup tag: ${backupTag}`,
+      status: "success",
+    });
 
     return NextResponse.json({ success: true, backupTag });
   } catch (error: any) {

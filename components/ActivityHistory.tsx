@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { Activity } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 import { Spinner, EmptyState } from "@/components/ui";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -17,6 +18,7 @@ export function ActivityHistory({
 }: {
   workspaceId?: string;
 }) {
+  const { t } = useLang();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,18 +39,18 @@ export function ActivityHistory({
   }, [workspaceId]);
 
   return (
-    <div className="panel">
+    <div className="panel" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div className="panel-header">
-        <h3>Activity History</h3>
-        <span className="badge badge-info">Live</span>
+        <h3>{t("activityHistory")}</h3>
+        <span className="badge badge-info">{t("live")}</span>
       </div>
       {loading ? (
-        <Spinner label="Loading activity..." />
+        <Spinner label={t("loadingActivity")} />
       ) : activities.length === 0 ? (
         <EmptyState
           icon="◷"
-          title="No activity yet"
-          description="Actions like cloning, editing, running commands, and committing will be logged here."
+          title={t("noActivity")}
+          description={t("noActivityDesc")}
         />
       ) : (
         <div className="activity-list">

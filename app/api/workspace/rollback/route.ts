@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { getAuthenticatedUser, getOwnedWorkspace } from "@/lib/supabase-server";
 import { rollbackToTag } from "@/lib/workspace";
 import { logActivity } from "@/lib/activities";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(req);
+  if (authError) return authError;
+  const userId = user!.id;
+
   try {
     const { workspaceId, tag } = await req.json();
 
@@ -16,27 +20,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: ws, error } = await supabaseAdmin
-      .from("workspaces")
-      .select("*")
-      .eq("id", workspaceId)
-      .maybeSingle();
+    const { workspace, error: wsError } = await getOwnedWorkspace(workspaceId, userId);
+    if (wsError) return wsError;
 
-    if (error || !ws) {
-      return NextResponse.json(
-        { error: "Workspace not found" },
-        { status: 404 }
-      );
-    }
-
-    await rollbackToTag(ws.local_path, tag);
-    await logActivity(
+    await rollbackToTag(workspace.local_path, tag);
+    await logActivity({
+      userId,
       workspaceId,
-      "rollback",
-      `Rolled back to ${tag}`,
-      null,
-      "warning"
-    );
+      type: "rollback",
+      action: "git_rollback",
+      title: `Rolled back to ${tag}`,
+      status: "warning",
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

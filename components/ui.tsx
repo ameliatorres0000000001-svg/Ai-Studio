@@ -24,8 +24,10 @@ export function Badge({
 
 export function StatusBadge({
   status,
+  label,
 }: {
   status: "connected" | "disconnected" | "pending" | "idle" | "ready" | "syncing" | "error";
+  label?: string;
 }) {
   const map: Record<string, { variant: BadgeVariant; label: string }> = {
     connected: { variant: "success", label: "Connected" },
@@ -40,7 +42,7 @@ export function StatusBadge({
   return (
     <span className={`status-badge ${variantClasses[cfg.variant]}`}>
       <span className="status-badge-dot" />
-      {cfg.label}
+      {label || cfg.label}
     </span>
   );
 }

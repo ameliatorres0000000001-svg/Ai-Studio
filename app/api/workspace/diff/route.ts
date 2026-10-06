@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { getAuthenticatedUser, getOwnedWorkspace } from "@/lib/supabase-server";
 import { getGitDiff } from "@/lib/workspace";
-import { logActivity } from "@/lib/activities";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(req);
+  if (authError) return authError;
+
   const { searchParams } = new URL(req.url);
   const workspaceId = searchParams.get("workspaceId");
 
@@ -16,21 +18,11 @@ export async function GET(req: Request) {
     );
   }
 
-  const { data: ws, error } = await supabaseAdmin
-    .from("workspaces")
-    .select("*")
-    .eq("id", workspaceId)
-    .maybeSingle();
-
-  if (error || !ws) {
-    return NextResponse.json(
-      { error: "Workspace not found" },
-      { status: 404 }
-    );
-  }
+  const { workspace, error: wsError } = await getOwnedWorkspace(workspaceId, user!.id);
+  if (wsError) return wsError;
 
   try {
-    const { diff, changedFiles } = await getGitDiff(ws.local_path);
+    const { diff, changedFiles } = await getGitDiff(workspace.local_path);
     return NextResponse.json({ diff, changedFiles });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

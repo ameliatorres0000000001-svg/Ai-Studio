@@ -13,7 +13,7 @@ function getClient(): Anthropic {
   return new Anthropic({ apiKey: key });
 }
 
-const SYSTEM_PROMPT = `You are Claude Code, an AI coding assistant integrated into AI Deploy Studio.
+const SYSTEM_PROMPT = `You are Claude Code, an AI coding assistant integrated into Claude Code Studio.
 You help developers manage and edit their GitHub repositories.
 
 When asked to edit code:

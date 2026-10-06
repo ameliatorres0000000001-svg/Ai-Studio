@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 
 interface ConnState {
   configured: boolean;
@@ -11,6 +12,7 @@ interface ConnState {
 }
 
 export function ConnectionStatus() {
+  const { t, lang } = useLang();
   const [github, setGithub] = useState<ConnState | null>(null);
   const [claude, setClaude] = useState<ConnState | null>(null);
 
@@ -47,15 +49,15 @@ export function ConnectionStatus() {
         <span className="conn-dot" />
         <span>GitHub</span>
         {github?.configured && github.username && <small>{github.username}</small>}
-        {!github?.configured && github?.setupRequired && (
-          <small>Set {github.envVars?.join(", ")}</small>
+        {!github?.configured && (
+          <small>{lang === "kh" ? "មិនបានកំណត់" : "Not set"}</small>
         )}
       </div>
       <div className={`conn-item ${claude?.configured ? "ok" : "warn"}`}>
         <span className="conn-dot" />
-        <span>Claude</span>
-        {!claude?.configured && claude?.setupRequired && (
-          <small>Set {claude.envVars?.join(", ")}</small>
+        <span>Claude Code</span>
+        {!claude?.configured && (
+          <small>{lang === "kh" ? "មិនបានកំណត់" : "Not set"}</small>
         )}
       </div>
       <div className="conn-item ok">

@@ -12,6 +12,7 @@ export interface GitHubRepo {
 
 export interface GitHubConnection {
   id: string;
+  user_id: string;
   username: string;
   avatar_url: string | null;
   connected_at: string;
@@ -20,8 +21,13 @@ export interface GitHubConnection {
 
 export interface Workspace {
   id: string;
+  user_id: string;
   repo_full_name: string;
   repo_default_branch: string;
+  repo_description: string | null;
+  repo_language: string | null;
+  repo_private: boolean;
+  repo_html_url: string | null;
   local_path: string;
   status: string;
   last_synced_at: string | null;
@@ -38,19 +44,51 @@ export interface FileNode {
 
 export interface Activity {
   id: string;
+  user_id: string;
   workspace_id: string | null;
   type: string;
+  action: string | null;
   title: string;
   detail: string | null;
+  prompt: string | null;
+  files_changed: string[] | null;
+  command: string | null;
+  test_result: string | null;
+  error: string | null;
   status: string;
   created_at: string;
 }
 
 export interface ChatMessage {
   id: string;
+  user_id: string;
   workspace_id: string;
   role: "user" | "assistant";
   content: string;
+  created_at: string;
+}
+
+export interface ClaudeSession {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  status: "active" | "completed" | "error";
+  prompt: string | null;
+  result_summary: string | null;
+  files_changed: string[] | null;
+  started_at: string;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface Deployment {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  platform: "vercel" | "railway";
+  status: "pending" | "success" | "failed";
+  url: string | null;
+  error: string | null;
   created_at: string;
 }
 

@@ -6,14 +6,31 @@ import type {
   ChatMessage,
   CommandResult,
 } from "./types";
+import { supabase } from "./supabase-client";
+
+async function getAuthToken(): Promise<string | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token || null;
+}
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
-  });
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, { ...options, headers });
   const data = await res.json();
   if (!res.ok) {
+    if (data.authRequired) {
+      throw new Error("AUTH_REQUIRED");
+    }
     throw new Error(data.error || `Request failed (${res.status})`);
   }
   return data as T;

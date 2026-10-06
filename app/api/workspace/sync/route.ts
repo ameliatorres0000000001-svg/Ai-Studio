@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import { getRepoInfo, getCloneUrl, isGitHubConfigured } from "@/lib/github";
 import { cloneRepo, pullLatest, getWorkspacePath } from "@/lib/workspace";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { getAuthenticatedUser, supabaseAdmin, getOwnedWorkspace } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activities";
 import fs from "fs";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const { user, error: authError } = await getAuthenticatedUser(req);
+  if (authError) return authError;
+  const userId = user!.id;
+
   if (!isGitHubConfigured()) {
     return NextResponse.json(
       {
-        error: "GitHub is not configured",
+        error: "Not connected — Configure in Settings",
         setupRequired: true,
         envVars: ["GITHUB_ACCESS_TOKEN"],
       },
@@ -42,6 +46,7 @@ export async function POST(req: Request) {
       .from("workspaces")
       .select("*")
       .eq("repo_full_name", repoFullName)
+      .eq("user_id", userId)
       .maybeSingle();
 
     let workspaceId: string;
@@ -71,11 +76,12 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", workspaceId);
-      await logActivity(workspaceId, "sync", `Synced ${repoFullName}`, null, "success");
+      await logActivity({ userId, workspaceId, type: "sync", title: `Synced ${repoFullName}`, status: "success" });
     } else {
       const { data: newWs, error } = await supabaseAdmin
         .from("workspaces")
         .insert({
+          user_id: userId,
           repo_full_name: repoFullName,
           repo_default_branch: repoInfo.default_branch,
           local_path: "",
@@ -101,7 +107,7 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", workspaceId);
-      await logActivity(workspaceId, "clone", `Cloned ${repoFullName}`, null, "success");
+      await logActivity({ userId, workspaceId, type: "clone", title: `Cloned ${repoFullName}`, status: "success" });
     }
 
     const { data: ws } = await supabaseAdmin
