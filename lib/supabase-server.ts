@@ -130,7 +130,10 @@ export async function getAuthenticatedUser(req: Request): Promise<{
 export async function getOwnedWorkspace(
   workspaceId: string,
   userId: string
-): Promise<{ workspace: Workspace | null; error: NextResponse | null }> {
+): Promise<
+  | { workspace: Workspace; error: null }
+  | { workspace: null; error: NextResponse }
+> {
   const { data: ws, error } = await supabaseAdmin
     .from("workspaces")
     .select("*")
