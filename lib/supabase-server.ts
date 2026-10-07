@@ -47,7 +47,14 @@ export interface AuthUser {
  * so open sign-up must not translate into access to those credentials.
  * In production an empty list denies everyone (fail closed).
  */
+const TELEGRAM_EMAIL_RE = /^tg_\d+@telegram\.local$/i;
+
 function isEmailAllowed(email: string): boolean {
+  // Telegram-login users have their own allowlist (TELEGRAM_ALLOWED_USER_IDS)
+  // checked at login time. Their deterministic email bypasses ALLOWED_USER_EMAILS.
+  if (TELEGRAM_EMAIL_RE.test(email)) {
+    return true;
+  }
   const raw = process.env.ALLOWED_USER_EMAILS || "";
   const allowed = raw
     .split(",")

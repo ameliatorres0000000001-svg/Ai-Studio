@@ -482,6 +482,13 @@ textarea:disabled { opacity: 0.5; }
 .setup-box code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; font-size: 11px; color: var(--text-1); font-family: var(--font-mono); }
 .env-list { background: var(--bg-0); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 14px; font-size: 12px; font-family: var(--font-mono); color: var(--text-2); line-height: 1.7; }
 
+/* ── Auth Divider & Telegram Login ─────── */
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--text-4); font-size: 12px; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border-subtle); }
+.telegram-login-section { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.telegram-login-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); font-weight: 600; }
+.telegram-widget-container { display: flex; justify-content: center; min-height: 40px; }
+
 /* ── Workflow Steps ────────────────────── */
 .workflow { display: flex; align-items: center; margin-bottom: 16px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
 .workflow-step { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); white-space: nowrap; flex-shrink: 0; }
