@@ -61,7 +61,7 @@ export async function POST(req: Request) {
           .update({ status: "syncing", updated_at: new Date().toISOString() })
           .eq("id", workspaceId);
         try {
-          await pullLatest(localPath);
+          await pullLatest(localPath, getCloneUrl(owner, repo));
         } catch {
           await cloneRepo(workspaceId, getCloneUrl(owner, repo), repoInfo.default_branch);
         }
