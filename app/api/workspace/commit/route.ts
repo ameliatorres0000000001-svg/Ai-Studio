@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser, getOwnedWorkspace } from "@/lib/supabase-server";
 import { commitAndPush, createBackup } from "@/lib/workspace";
 import { logActivity } from "@/lib/activities";
+import { getCloneUrl } from "@/lib/github";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,12 @@ export async function POST(req: Request) {
     if (wsError) return wsError;
 
     const backupTag = await createBackup(workspace.local_path, "precommit");
-    await commitAndPush(workspace.local_path, message);
+    const [repoOwner, repoName] = String(workspace.repo_full_name).split("/");
+    await commitAndPush(
+      workspace.local_path,
+      message,
+      getCloneUrl(repoOwner, repoName)
+    );
 
     await logActivity({
       userId,
