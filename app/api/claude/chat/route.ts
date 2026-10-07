@@ -33,7 +33,12 @@ export async function POST(req: Request) {
     }
 
     const { workspace, error: wsError } = await getOwnedWorkspace(workspaceId, userId);
-    if (wsError) return wsError;
+    if (wsError || !workspace) {
+  return (
+    wsError ??
+    NextResponse.json({ error: "Workspace not found" }, { status: 404 })
+  );
+}
 
     const { data: session } = await supabaseAdmin
       .from("claude_sessions")
