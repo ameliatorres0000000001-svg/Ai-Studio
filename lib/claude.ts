@@ -4,6 +4,7 @@ import { readFileTree, resolveInside, writeFileContent, redactSecrets } from "./
 
 // SERVER-ONLY. The API key is read from the environment and never leaves the server.
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514";
+const BASE_URL = process.env.ANTHROPIC_BASE_URL;
 const MAX_TOKENS = Number(process.env.ANTHROPIC_MAX_TOKENS) || 8192;
 const MAX_CONTEXT_FILE_CHARS = 60_000;
 const MAX_TREE_CHARS = 20_000;
@@ -15,7 +16,10 @@ export function isClaudeConfigured(): boolean {
 function getClient(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY is not configured");
-  return new Anthropic({ apiKey: key });
+  return new Anthropic({
+    apiKey: key,
+    ...(BASE_URL ? { baseURL: BASE_URL } : {}),
+  });
 }
 
 const SYSTEM_PROMPT = `You are Claude Code, an AI coding assistant integrated into Claude Code Studio.
