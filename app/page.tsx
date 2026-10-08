@@ -582,7 +582,7 @@ function IDEWorkspace({
 
 function SettingsView({ githubStatus }: { githubStatus: any }) {
   const { t } = useLang();
-  const [health, setHealth] = useState<{ claude: boolean } | null>(null);
+  const [health, setHealth] = useState<{ claude: boolean; supabase: boolean; vercel: boolean } | null>(null);
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth(null));
@@ -621,7 +621,12 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
 
       <div className="settings-section">
         <h4><BrandIcon name="supabase" /> {t("supabaseSetting")}</h4>
-        <p>Status: <StatusBadge status="connected" /></p>
+        <p>Status: <StatusBadge status={health?.supabase ? "connected" : "disconnected"} /></p>
+        {!health?.supabase && (
+          <div className="setup-box">
+            <p>The server database connection is incomplete. The deployment needs its server-only Supabase access key.</p>
+          </div>
+        )}
       </div>
 
       <div className="settings-section">
@@ -631,10 +636,12 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
 
       <div className="settings-section">
         <h4>{t("vercelSetting")} & {t("railwaySetting")}</h4>
-        <p>Status: <StatusBadge status="disconnected" /></p>
-        <div className="setup-box">
-          <p>Set <code>VERCEL_TOKEN</code> and <code>RAILWAY_TOKEN</code> in your <code>.env</code> file to enable deployments.</p>
-        </div>
+        <p>Status: <StatusBadge status={health?.vercel ? "connected" : "disconnected"} /></p>
+        {!health?.vercel && (
+          <div className="setup-box">
+            <p>Vercel deployment is not connected. Add <code>VERCEL_TOKEN</code> to enable deployments.</p>
+          </div>
+        )}
       </div>
 
       <div className="settings-section">
