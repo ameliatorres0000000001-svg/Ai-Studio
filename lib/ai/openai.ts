@@ -1,4 +1,4 @@
-import type { ChatMessage, Effort, Provider, ProviderResult, ResolvedModel } from "./types";
+import type { ChatMessage, Effort, Provider, ProviderResult, ResolvedModel, SendOptions } from "./types";
 
 // SERVER-ONLY. OpenAI chat-completions format, via plain fetch (no extra dependency).
 // The base URL env var must include any version prefix, e.g. https://host/v1
@@ -13,7 +13,7 @@ interface ChatCompletionResponse {
 }
 
 export const openaiProvider: Provider = {
-  async send(messages: ChatMessage[], model: ResolvedModel, effort?: Effort): Promise<ProviderResult> {
+  async send(messages: ChatMessage[], model: ResolvedModel, effort?: Effort, opts?: SendOptions): Promise<ProviderResult> {
     if (!model.baseUrl) {
       throw new Error("OpenAI-format route requires a base URL env var");
     }
@@ -31,7 +31,7 @@ export const openaiProvider: Provider = {
         body: JSON.stringify({
           model: model.config.upstreamModel,
           messages,
-          max_completion_tokens: MAX_TOKENS,
+          max_completion_tokens: opts?.maxTokens ?? MAX_TOKENS,
           ...(effort && model.config.effortSupport ? { reasoning_effort: effort } : {}),
         }),
         signal: controller.signal,
@@ -45,7 +45,9 @@ export const openaiProvider: Provider = {
         /* non-JSON body */
       }
       if (!res.ok) {
-        throw new Error(body?.error?.message || `Model API error (${res.status})`);
+        const err: any = new Error(body?.error?.message || `Model API error (${res.status})`);
+        err.status = res.status;
+        throw err;
       }
 
       return {

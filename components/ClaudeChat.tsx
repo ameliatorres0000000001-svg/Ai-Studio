@@ -2,9 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
-import type { ChatMessage, ChatEffort, ChatPurpose, ModelOption } from "@/lib/types";
+import type {
+  ChatMessage,
+  ChatEffort,
+  ChatPurpose,
+  ModelOption,
+  TokenUsage,
+  ChatModelInfo,
+} from "@/lib/types";
 import { useLang, type TKey } from "@/lib/i18n";
-import { Button, EmptyState } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { ModelIcon } from "@/components/ModelIcon";
+
+type DisplayMsg = ChatMessage & { model?: ChatModelInfo; usage?: TokenUsage };
 
 const EFFORT_OPTIONS: { value: ChatEffort; key: TKey }[] = [
   { value: "low", key: "effortLow" },
@@ -16,6 +26,31 @@ const TIER_KEY: Record<ModelOption["tier"], TKey> = {
   pro: "tierPro",
   premium: "tierPremium",
 };
+const RANK: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+
+const LS = {
+  code: "ccs-chat-model-code",
+  research: "ccs-chat-model-research",
+  effort: "ccs-chat-effort",
+};
+
+function loadLS(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function saveLS(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* private mode: last choice is simply not remembered */
+  }
+}
+
+const supports = (m: ModelOption, p: ChatPurpose) => m.purpose.includes(p);
 
 export function ClaudeChat({
   workspaceId,
@@ -29,32 +64,47 @@ export function ClaudeChat({
   onApplied?: () => void;
 }) {
   const { t, lang } = useLang();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<DisplayMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimit, setRateLimit] = useState<{ kh: string; en: string } | null>(null);
   const [lastResult, setLastResult] = useState<{
     filesChanged: string[];
     proposedFiles: { path: string; content: string }[];
     diff: string | null;
     applied: boolean;
+    model?: ChatModelInfo;
+    usage?: TokenUsage;
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [models, setModels] = useState<ModelOption[] | null>(null);
+  const [plan, setPlan] = useState<string>("free");
   const [purpose, setPurpose] = useState<ChatPurpose>("code");
   const [selected, setSelected] = useState<Partial<Record<ChatPurpose, string>>>({});
-  const [effort, setEffort] = useState<ChatEffort>("medium");
+  const [effort, setEffort] = useState<ChatEffort>(() => {
+    const saved = typeof window !== "undefined" ? loadLS(LS.effort) : null;
+    return saved === "low" || saved === "medium" || saved === "high" ? saved : "medium";
+  });
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [attachFile, setAttachFile] = useState(false);
 
   useEffect(() => {
     api
       .getModels()
-      .then(({ models }) => {
+      .then(({ models, plan }) => {
         setModels(models);
-        const first = (p: ChatPurpose) => models.find((m) => m.purpose === p)?.id;
-        setSelected({ code: first("code"), research: first("research") });
-        setPurpose(first("code") ? "code" : "research");
+        setPlan(plan || "free");
+        const pick = (p: ChatPurpose) => {
+          const saved = loadLS(p === "code" ? LS.code : LS.research);
+          if (saved && models.some((m) => m.id === saved && supports(m, p))) return saved;
+          return models.find((m) => supports(m, p))?.id;
+        };
+        const code = pick("code");
+        const research = pick("research");
+        setSelected({ code, research });
+        setPurpose(code ? "code" : "research");
       })
       .catch(() => setModels([]));
   }, []);
@@ -62,12 +112,24 @@ export function ClaudeChat({
   const modelId = selected[purpose];
   const currentModel = models?.find((m) => m.id === modelId);
   const canAttach = purpose === "research" && !!currentFile && fileContent !== undefined;
+  const locked = (m: ModelOption) => (RANK[m.tier] ?? 0) > (RANK[plan] ?? 0);
+  const effortKey = EFFORT_OPTIONS.find((o) => o.value === effort)?.key ?? "effortMedium";
 
   function chooseModel(id: string) {
     const m = models?.find((x) => x.id === id);
-    if (!m) return;
-    setPurpose(m.purpose);
-    setSelected((prev) => ({ ...prev, [m.purpose]: id }));
+    if (!m || locked(m)) return;
+    setSelected((prev) => ({ ...prev, [purpose]: id }));
+    saveLS(purpose === "code" ? LS.code : LS.research, id);
+    setSheetOpen(false);
+  }
+
+  function switchPurpose(p: ChatPurpose) {
+    setPurpose(p);
+  }
+
+  function chooseEffort(e: ChatEffort) {
+    setEffort(e);
+    saveLS(LS.effort, e);
   }
 
   useEffect(() => {
@@ -110,6 +172,7 @@ export function ClaudeChat({
     setInput("");
     setLoading(true);
     setError(null);
+    setRateLimit(null);
     setLastResult(null);
 
     setMessages((prev) => [
@@ -151,6 +214,8 @@ export function ClaudeChat({
           role: "assistant",
           content: result.response,
           created_at: new Date().toISOString(),
+          model: result.model,
+          usage: result.usage,
         },
       ]);
 
@@ -167,80 +232,133 @@ export function ClaudeChat({
           proposedFiles: result.proposedFiles,
           diff: result.diff,
           applied,
+          model: result.model,
+          usage: result.usage,
         });
       }
     } catch (e: any) {
-      setError(e.message);
+      if (e?.status === 429) {
+        setRateLimit({
+          kh: e?.data?.messageKh || e.message,
+          en: e?.data?.messageEn || e.message,
+        });
+      } else {
+        setError(e.message);
+      }
     } finally {
       setLoading(false);
     }
   }
 
+  const visible = (models ?? []).filter((m) => supports(m, purpose));
+  const providers: string[] = [];
+  for (const m of visible) {
+    if (!providers.includes(m.provider)) providers.push(m.provider);
+  }
+  const codeCount = (models ?? []).filter((m) => supports(m, "code")).length;
+  const researchCount = (models ?? []).filter((m) => supports(m, "research")).length;
+
   return (
     <div className="claude-chat">
       <div className="chat-header">
-        <div className="chat-header-info">
-          <span className="chat-header-icon">✦</span>
-          <span className="chat-header-title">{t("aiAssistant")}</span>
-        </div>
+        <button
+          type="button"
+          className="chat-model-btn"
+          onClick={() => setSheetOpen(true)}
+          disabled={loading || !models?.length}
+          aria-haspopup="dialog"
+        >
+          {currentModel ? (
+            <ModelIcon icon={currentModel.icon} label={currentModel.label} size={22} />
+          ) : (
+            <span className="chat-header-icon">✦</span>
+          )}
+          <span className="chat-model-name">{currentModel?.label ?? t("modelLabel")}</span>
+          {currentModel?.effortSupport && (
+            <span className="badge badge-neutral">{t(effortKey)}</span>
+          )}
+          <span className="chat-model-caret" aria-hidden="true">▾</span>
+        </button>
         <div className="chat-header-status">
           <span className={`claude-status-dot ${loading ? "thinking" : "idle"}`} />
-          <small>{loading ? t("claudeThinking") : (lang === "kh" ? "រួចរាល់" : "Ready")}</small>
+          <small>{loading ? t("claudeThinking") : lang === "kh" ? "រួចរាល់" : "Ready"}</small>
         </div>
       </div>
 
-      <div className="chat-controls">
-        <div className="mode-toggle" role="group" aria-label={t("modelLabel")}>
-          {(["code", "research"] as ChatPurpose[]).map((p) => (
-            <button
-              key={p}
-              type="button"
-              className={purpose === p ? "active" : ""}
-              aria-pressed={purpose === p}
-              disabled={loading || !selected[p]}
-              onClick={() => setPurpose(p)}
-            >
-              {t(p === "code" ? "modeCode" : "modeResearch")}
-            </button>
-          ))}
+      {sheetOpen && (
+        <div className="sheet-overlay" onClick={() => setSheetOpen(false)}>
+          <div
+            className="sheet"
+            role="dialog"
+            aria-label={t("modelLabel")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sheet-handle" aria-hidden="true" />
+            <div className="mode-toggle" role="group" aria-label={t("modelLabel")}>
+              {(["code", "research"] as ChatPurpose[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={purpose === p ? "active" : ""}
+                  aria-pressed={purpose === p}
+                  disabled={p === "code" ? codeCount === 0 : researchCount === 0}
+                  onClick={() => switchPurpose(p)}
+                >
+                  {t(p === "code" ? "modeCode" : "modeResearch")}
+                </button>
+              ))}
+            </div>
+            {currentModel?.effortSupport && (
+              <div className="effort-toggle" role="group" aria-label={t("effortLabel")}>
+                {EFFORT_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    className={effort === o.value ? "active" : ""}
+                    aria-pressed={effort === o.value}
+                    onClick={() => chooseEffort(o.value)}
+                  >
+                    {t(o.key)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="sheet-list">
+              {providers.map((provider) => (
+                <div key={provider}>
+                  <div className="sheet-group">{provider}</div>
+                  {visible
+                    .filter((m) => m.provider === provider)
+                    .map((m) => {
+                      const isLocked = locked(m);
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className={`model-row ${m.id === modelId ? "selected" : ""} ${isLocked ? "locked" : ""}`}
+                          disabled={isLocked}
+                          onClick={() => chooseModel(m.id)}
+                        >
+                          <ModelIcon icon={m.icon} label={m.label} size={24} />
+                          <span className="model-row-name">{m.label}</span>
+                          <span className={`badge ${m.tier === "free" ? "badge-success" : m.tier === "pro" ? "badge-info" : "badge-warning"}`}>
+                            {t(TIER_KEY[m.tier])}
+                          </span>
+                          {isLocked ? (
+                            <span className="model-lock">🔒 {t("upgrade")}</span>
+                          ) : (
+                            m.id === modelId && <span className="model-check" aria-hidden="true">✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                </div>
+              ))}
+              {visible.length === 0 && <div className="chat-error">{t("noModels")}</div>}
+            </div>
+          </div>
         </div>
-        <label className="chat-select">
-          <span>{t("modelLabel")}</span>
-          <select
-            value={modelId ?? ""}
-            onChange={(e) => chooseModel(e.target.value)}
-            disabled={loading || !models?.length}
-          >
-            {(["code", "research"] as ChatPurpose[]).map((p) => {
-              const group = (models ?? []).filter((m) => m.purpose === p);
-              if (group.length === 0) return null;
-              return (
-                <optgroup key={p} label={t(p === "code" ? "modeCode" : "modeResearch")}>
-                  {group.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label} · {t(TIER_KEY[m.tier])}
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
-          </select>
-        </label>
-        <label className="chat-select">
-          <span>{t("effortLabel")}</span>
-          <select
-            value={effort}
-            onChange={(e) => setEffort(e.target.value as ChatEffort)}
-            disabled={loading || !currentModel?.effortSupport}
-          >
-            {EFFORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {t(o.key)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      )}
 
       {models && models.length === 0 && <div className="chat-error">{t("noModels")}</div>}
 
@@ -267,8 +385,23 @@ export function ClaudeChat({
         )}
         {messages.map((m) => (
           <div key={m.id} className={`chat-msg ${m.role}`}>
-            <small>{m.role === "user" ? (lang === "kh" ? "អ្នក" : "You") : "Claude"}</small>
+            <small>{m.role === "user" ? (lang === "kh" ? "អ្នក" : "You") : t("aiAssistant")}</small>
             <p>{m.content}</p>
+            {m.role === "assistant" && (m.model || m.usage) && (
+              <div className="chat-msg-meta">
+                {m.model && (
+                  <>
+                    <ModelIcon icon={m.model.icon} label={m.model.label} size={14} />
+                    <span>{m.model.label}</span>
+                  </>
+                )}
+                {m.usage && (
+                  <span className="chat-tokens">
+                    {m.usage.inputTokens} in · {m.usage.outputTokens} out
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         ))}
         {loading && (
@@ -279,6 +412,16 @@ export function ClaudeChat({
         )}
       </div>
 
+      {rateLimit && (
+        <div className="rate-banner" role="alert">
+          <span aria-hidden="true">⚠</span>
+          <div>
+            <strong>{t("rateLimitTitle")}</strong>
+            <p>{lang === "kh" ? rateLimit.kh : rateLimit.en}</p>
+            <small>{lang === "kh" ? rateLimit.en : rateLimit.kh}</small>
+          </div>
+        </div>
+      )}
       {error && <div className="chat-error">{error}</div>}
 
       {lastResult && !lastResult.applied && (

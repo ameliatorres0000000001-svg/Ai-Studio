@@ -19,10 +19,16 @@ export interface RouteConfig {
 export interface ModelConfig {
   id: string;
   label: string;
-  purpose: Purpose;
+  /** Modes this model may be used for. */
+  purpose: Purpose[];
   tier: Tier;
   route: string;
+  /** Upstream model id. Empty (or TODO*) hides the model until it is configured. */
   upstreamModel: string;
+  /** Display group in the model picker. */
+  provider: string;
+  /** File name under /icon/. A missing file falls back to initials. */
+  icon: string;
   effortSupport: boolean;
 }
 
@@ -36,8 +42,10 @@ export interface ModelsConfig {
 export interface PublicModel {
   id: string;
   label: string;
-  purpose: Purpose;
+  purpose: Purpose[];
   tier: Tier;
+  provider: string;
+  icon: string;
   effortSupport: boolean;
 }
 
@@ -67,6 +75,11 @@ export interface ProviderResult {
   usage: Usage;
 }
 
+export interface SendOptions {
+  /** Overrides the default max tokens (used by the admin model test). */
+  maxTokens?: number;
+}
+
 export interface Provider {
-  send(messages: ChatMessage[], model: ResolvedModel, effort?: Effort): Promise<ProviderResult>;
+  send(messages: ChatMessage[], model: ResolvedModel, effort?: Effort, opts?: SendOptions): Promise<ProviderResult>;
 }

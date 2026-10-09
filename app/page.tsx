@@ -13,26 +13,20 @@ import { ActivityHistory } from "@/components/ActivityHistory";
 import { DiffViewer } from "@/components/DiffViewer";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { TelegramConnector, TELEGRAM_CHANGED_EVENT } from "@/components/TelegramConnector";
-import DashboardPreview from "@/components/DashboardPreview";
+import { DashboardView } from "@/components/Dashboard";
+import { Subscription } from "@/components/Subscription";
 import type { TelegramStatus } from "@/lib/types";
 import { BottomPanel } from "@/components/BottomPanel";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Button, StatusBadge, EmptyState, BrandIcon } from "@/components/ui";
 
-type Tab = "Dashboard" | "Projects" | "Workspace" | "Preview" | "Settings";
+type Tab = "Dashboard" | "Projects" | "Workspace" | "Subscription" | "Settings";
 
-const PreviewIcon = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const NAV_ITEMS: { id: Tab; icon: ReactNode; labelKey: "dashboard" | "projects" | "workspace" | "preview" | "settings"; needsWorkspace?: boolean }[] = [
+const NAV_ITEMS: { id: Tab; icon: ReactNode; labelKey: "dashboard" | "projects" | "workspace" | "subscription" | "settings"; needsWorkspace?: boolean }[] = [
   { id: "Dashboard", icon: "▣", labelKey: "dashboard" },
   { id: "Projects", icon: "◉", labelKey: "projects" },
   { id: "Workspace", icon: "▸", labelKey: "workspace", needsWorkspace: true },
-  { id: "Preview", icon: PreviewIcon, labelKey: "preview" },
+  { id: "Subscription", icon: "◆", labelKey: "subscription" },
   { id: "Settings", icon: "⚙", labelKey: "settings" },
 ];
 
@@ -101,7 +95,7 @@ export default function Home() {
     { id: "dashboard", label: t("dashboard"), icon: "▣", action: () => setTab("Dashboard") },
     { id: "projects", label: t("projects"), icon: "◉", action: () => setTab("Projects") },
     { id: "workspace", label: t("workspace"), icon: "▸", action: () => workspace && setTab("Workspace") },
-    { id: "preview", label: t("preview"), icon: "◎", action: () => setTab("Preview") },
+    { id: "subscription", label: t("subscription"), icon: "◆", action: () => setTab("Subscription") },
     { id: "settings", label: t("settings"), icon: "⚙", action: () => setTab("Settings") },
     { id: "lang-kh", label: "ខ្មែរ (KH)", icon: "ខ", action: () => {} },
     { id: "lang-en", label: "English (EN)", icon: "EN", action: () => {} },
@@ -200,11 +194,10 @@ export default function Home() {
 
         {tab !== "Workspace" && (
           <div className="wrap">
-            {tab !== "Preview" && <WorkflowBar activeStep={activeStepIndex} steps={WORKFLOW_STEPS} t={t} />}
+            {(tab === "Dashboard" || tab === "Projects") && <WorkflowBar activeStep={activeStepIndex} steps={WORKFLOW_STEPS} t={t} />}
 
             {tab === "Dashboard" && (
               <DashboardView
-                githubStatus={githubStatus}
                 workspace={workspace}
                 workspaces={workspaces}
                 onSelectWorkspace={selectWorkspace}
@@ -216,7 +209,14 @@ export default function Home() {
               <ProjectsView workspaces={workspaces} onSelectWorkspace={selectWorkspace} />
             )}
 
-            {tab === "Preview" && <DashboardPreview embedded />}
+            {tab === "Subscription" && (
+              <div className="panel">
+                <div className="panel-header">
+                  <h3>{t("subscription")}</h3>
+                </div>
+                <Subscription />
+              </div>
+            )}
 
             {tab === "Settings" && <SettingsView githubStatus={githubStatus} />}
           </div>
@@ -268,169 +268,6 @@ function WorkflowBar({ activeStep, steps, t }: { activeStep: number; steps: read
   );
 }
 
-function DashboardView({
-  githubStatus,
-  workspace,
-  workspaces,
-  onSelectWorkspace,
-  setTab,
-}: {
-  githubStatus: any;
-  workspace: Workspace | null;
-  workspaces: Workspace[];
-  onSelectWorkspace: (ws: Workspace) => void;
-  setTab: (t: Tab) => void;
-}) {
-  const { t, lang } = useLang();
-  const [health, setHealth] = useState<{ claude: boolean; supabase: boolean; vercel: boolean } | null>(null);
-  useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null));
-  }, []);
-
-  const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
-      api
-        .telegramStatus()
-        .then((st) => alive && setTelegram(st))
-        .catch(() => alive && setTelegram(null));
-    load();
-    window.addEventListener(TELEGRAM_CHANGED_EVENT, load);
-    return () => {
-      alive = false;
-      window.removeEventListener(TELEGRAM_CHANGED_EVENT, load);
-    };
-  }, []);
-
-  // Same underlying status sources as before; only the presentation changed.
-  const integrations: {
-    id: string;
-    name: string;
-    description: string;
-    icon: "github" | "claude" | "supabase" | "telegram";
-    connected: boolean;
-    detail?: string;
-  }[] = [
-    {
-      id: "github",
-      name: "GitHub",
-      description: "Connect your GitHub repository",
-      icon: "github",
-      connected: !!githubStatus?.configured,
-      detail: githubStatus?.username ? `${t("connectedAs")} ${githubStatus.username}` : undefined,
-    },
-    { id: "claude", name: "Claude Code", description: "Connect your Claude Code workspace", icon: "claude", connected: !!health?.claude },
-    { id: "supabase", name: "Supabase", description: "Connect your Supabase project", icon: "supabase", connected: !!health?.supabase },
-    {
-      id: "telegram",
-      name: "Telegram",
-      description: "Connect your Telegram bot",
-      icon: "telegram",
-      connected: telegram?.state === "connected",
-      detail: telegram?.state === "connected" && telegram.bot?.username ? `@${telegram.bot.username}` : undefined,
-    },
-  ];
-
-  return (
-    <>
-      <div className="hero">
-        <div>
-          <div className="hero-label">{t("subtitle")}</div>
-          <h1>{lang === "kh" ? "សាងសង់ កែសម្រួល និងបង្ហោះជាមួយ Claude Code" : "Build, edit & deploy with Claude Code."}</h1>
-          <p>{t("selectRepoDesc")}</p>
-        </div>
-        <Button onClick={() => setTab("Projects")}>{t("selectRepo")} →</Button>
-      </div>
-
-      <div className="dashboard-grid">
-        <div className="panel">
-          <div className="panel-header">
-            <h3>{t("currentProject")}</h3>
-          </div>
-          {workspace ? (
-            <div className="dash-project-info">
-              <div className="dash-project-name">{workspace.repo_full_name}</div>
-              <div className="dash-project-meta">
-                <span>{t("branch")}: {workspace.repo_default_branch}</span>
-                <StatusBadge
-                  status={workspace.status === "ready" ? "ready" : "idle"}
-                  label={workspace.status === "ready" ? t("ready_") : t("idle_")}
-                />
-              </div>
-              <Button variant="secondary" className="btn-sm" onClick={() => setTab("Workspace")}>
-                {t("workspace")} →
-              </Button>
-            </div>
-          ) : (
-            <div className="dash-no-project">
-              <small>{t("noProject")}</small>
-              <Button variant="secondary" className="btn-sm" onClick={() => setTab("Projects")}>
-                {t("selectProject")}
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="panel">
-          <div className="panel-header">
-            <h3>{t("integrationStatus")}</h3>
-          </div>
-          <div className="integration-list">
-            {integrations.map((item) => (
-              <div key={item.id} className={`integration-row ${item.connected ? "is-connected" : ""}`}>
-                <span className="integration-icon"><BrandIcon name={item.icon} size={20} /></span>
-                <span className="integration-copy">
-                  <strong>{item.name}</strong>
-                  <small>{item.connected && item.detail ? item.detail : item.description}</small>
-                </span>
-                {item.connected ? (
-                  <span className="integration-connected"><i /> {t("connected_")}</span>
-                ) : (
-                  <button type="button" className="integration-connect" onClick={() => setTab("Settings")}>
-                    Connect <span aria-hidden="true">→</span>
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel" style={{ gridColumn: "span 2" }}>
-          <div className="panel-header">
-            <h3>{t("recentActivity")}</h3>
-            <Button variant="ghost" className="btn-sm" onClick={() => setTab("Projects")}>
-              {t("browseProjects")}
-            </Button>
-          </div>
-          {workspaces.length === 0 ? (
-            <EmptyState
-              icon="◉"
-              title={lang === "kh" ? "មិនមានឃ្លាំងសម្ងាត់បានសមកាល" : "No repositories synced yet"}
-              description={lang === "kh" ? "ជ្រើសរើសឃ្លាំងសម្ងាត់ពីផ្ទាំងគម្រោងដើម្បី clone និងចាប់ផ្តើមធ្វើការ。" : "Select a repository from the Projects tab to clone it and start working."}
-              action={<Button onClick={() => setTab("Projects")}>{t("selectRepo")}</Button>}
-            />
-          ) : (
-            <div className="dash-workspace-list">
-              {workspaces.map((ws) => (
-                <button key={ws.id} className="row" onClick={() => onSelectWorkspace(ws)}>
-                  <span className="row-icon">◈</span>
-                  <span className="row-text">
-                    <b>{ws.repo_full_name}</b>
-                    <small>{t("branch")}: {ws.repo_default_branch}</small>
-                  </span>
-                  <em>{ws.status === "ready" ? t("ready_") : t("idle_")}</em>
-                  <span className="row-tag">{ws.repo_default_branch}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-
 function ProjectsView({
   workspaces,
   onSelectWorkspace,
@@ -438,7 +275,7 @@ function ProjectsView({
   workspaces: Workspace[];
   onSelectWorkspace: (ws: Workspace) => void;
 }) {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   return (
     <>
       <RepoSelector onSelect={onSelectWorkspace} />
@@ -607,7 +444,7 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
         <h4><BrandIcon name="claude" /> {t("claudeSetting")}</h4>
         <p>Status: <StatusBadge status="disconnected" /></p>
         <div className="setup-box">
-          <p>Get an API key from console.anthropic.com and set <code>ANTHROPIC_API_KEY</code> in your <code>.env</code> file.</p>
+          <p>Set the gateway key (<code>AI_GATEWAY_API_KEY</code>) and base URLs (<code>AI_GATEWAY_BASE_URL</code>, <code>AI_GATEWAY_OPENAI_BASE_URL</code>) in your <code>.env</code> file. Optional direct keys: <code>ANTHROPIC_API_KEY</code>, <code>GOOGLE_AI_API_KEY</code>, <code>OPENROUTER_API_KEY</code>, <code>BEDROCK_API_KEY</code>.</p>
         </div>
       </div>
 
@@ -631,25 +468,54 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
 
       <div className="settings-section">
         <h4>{t("requiredEnvVars")}</h4>
-        <pre className="env-list">{`# GitHub (Personal Access Token with repo scope)
-GITHUB_ACCESS_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+        <pre className="env-list">{`# GitHub
+GITHUB_ACCESS_TOKEN=
+GITHUB_ALLOWED_REPOS=
 
-# Anthropic / Claude Code
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxx
+# Model gateway (Anthropic + OpenAI formats)
+AI_GATEWAY_API_KEY=
+AI_GATEWAY_BASE_URL=
+AI_GATEWAY_OPENAI_BASE_URL=
 
-# Vercel (deployment)
-VERCEL_TOKEN=
+# Direct providers (optional)
+ANTHROPIC_API_KEY=
+GOOGLE_AI_BASE_URL=
+GOOGLE_AI_API_KEY=
+OPENROUTER_BASE_URL=
+OPENROUTER_API_KEY=
+BEDROCK_BASE_URL=
+BEDROCK_API_KEY=
+AI_MAX_TOKENS=
 
-# Railway (server/bot deployment)
-RAILWAY_TOKEN=
+# Plans, quotas, admin
+ADMIN_EMAILS=
+ALLOWED_USER_EMAILS=
+
+# Payments (manual KHQR review)
+FEATURE_PAYMENTS=
+PAYMENTS_KHQR_IMAGE_URL=
 
 # Telegram connector (optional, server-side only)
 TELEGRAM_BOT_TOKEN=
+TELEGRAM_ALLOWED_USER_IDS=
+
+# Deployments
+VERCEL_TOKEN=
+VERCEL_PROJECT_NAME=
+VERCEL_TEAM_ID=
+RAILWAY_TOKEN=
+
+# Git identity for the Commit button
+GIT_COMMIT_NAME=
+GIT_COMMIT_EMAIL=
+
+# Server
+WORKSPACE_ROOT=
 
 # Supabase (auto-configured)
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...`}</pre>
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=`}</pre>
       </div>
     </div>
   );

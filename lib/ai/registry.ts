@@ -16,6 +16,9 @@ for (const m of config.models) {
   if (!config.routes[m.route]) {
     throw new Error(`config/models.json: model "${m.id}" uses unknown route "${m.route}"`);
   }
+  if (!Array.isArray(m.purpose)) {
+    throw new Error(`config/models.json: model "${m.id}" purpose must be an array`);
+  }
 }
 
 function envValue(name: string | undefined): string | undefined {
@@ -30,9 +33,9 @@ function isRouteConfigured(route: RouteConfig): boolean {
   return true;
 }
 
-/** Models whose upstream id is still a TODO placeholder are never offered. */
+/** Models with an empty (or TODO placeholder) upstream id are never offered. */
 function isModelAvailable(m: ModelConfig): boolean {
-  if (m.upstreamModel.startsWith("TODO")) return false;
+  if (!m.upstreamModel || m.upstreamModel.startsWith("TODO")) return false;
   return isRouteConfigured(config.routes[m.route]);
 }
 
@@ -42,6 +45,8 @@ function toPublic(m: ModelConfig): PublicModel {
     label: m.label,
     purpose: m.purpose,
     tier: m.tier,
+    provider: m.provider,
+    icon: m.icon,
     effortSupport: m.effortSupport,
   };
 }

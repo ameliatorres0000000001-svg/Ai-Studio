@@ -10,6 +10,8 @@ import type {
   ModelOption,
   ChatPurpose,
   ChatEffort,
+  TokenUsage,
+  ChatModelInfo,
 } from "./types";
 import { supabase } from "./supabase-client";
 
@@ -20,28 +22,72 @@ async function getAuthToken(): Promise<string | null> {
   return session?.access_token || null;
 }
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+async function authHeaders(extra?: Record<string, string>): Promise<Record<string, string>> {
   const token = await getAuthToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options?.headers as Record<string, string>),
-  };
+  const headers: Record<string, string> = { ...(extra || {}) };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+  return headers;
+}
+
+async function throwForStatus(res: Response): Promise<never> {
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    /* non-JSON body */
+  }
+  if (data.authRequired) {
+    throw new Error("AUTH_REQUIRED");
+  }
+  if (data.syncRequired) {
+    throw new Error(data.error || "Workspace must be synced again");
+  }
+  const err: any = new Error(
+    data.messageEn || data.error || `Request failed (${res.status})`
+  );
+  err.status = res.status;
+  err.data = data;
+  throw err;
+}
+
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const headers = await authHeaders({
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
+  });
 
   const res = await fetch(url, { ...options, headers });
-  const data = await res.json();
   if (!res.ok) {
-    if (data.authRequired) {
-      throw new Error("AUTH_REQUIRED");
-    }
-    if (data.syncRequired) {
-      throw new Error(data.error || "Workspace must be synced again");
-    }
-    throw new Error(data.error || `Request failed (${res.status})`);
+    await throwForStatus(res);
   }
-  return data as T;
+  return (await res.json()) as T;
+}
+
+async function fetchForm<T>(url: string, form: FormData): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(url, { method: "POST", headers, body: form });
+  if (!res.ok) {
+    await throwForStatus(res);
+  }
+  return (await res.json()) as T;
+}
+
+export interface PlanSummary {
+  id: string;
+  label: string;
+  priceUsd: number;
+  dailyLimit: number;
+  tiers: string[];
+  savePct: number;
+}
+
+export interface PaymentsConfig {
+  enabled: boolean;
+  khqrImageUrl: string | null;
+  plans: PlanSummary[];
+  models: { id: string; label: string; tier: string; icon: string }[];
 }
 
 export const api = {
@@ -134,7 +180,21 @@ export const api = {
       { method: "POST", body: JSON.stringify({ workspaceId, files }) }
     ),
 
-  getModels: () => fetchJson<{ models: ModelOption[] }>("/api/models"),
+  getModels: () => fetchJson<{ models: ModelOption[]; plan: string }>("/api/models"),
+
+  testModel: (modelId: string) =>
+    fetchJson<{ ok: boolean; latencyMs: number; error: string | null }>(
+      "/api/models/test",
+      { method: "POST", body: JSON.stringify({ modelId }) }
+    ),
+
+  getUsage: () =>
+    fetchJson<{
+      plan: string;
+      dailyLimit: number;
+      today: { requests: number; inputTokens: number; outputTokens: number };
+      days: { date: string; requests: number; inputTokens: number; outputTokens: number }[];
+    }>("/api/usage"),
 
   claudeChat: (
     workspaceId: string,
@@ -154,6 +214,8 @@ export const api = {
       proposedFiles: { path: string; content: string }[];
       diff: string | null;
       applied: boolean;
+      usage?: TokenUsage;
+      model?: ChatModelInfo;
     }>("/api/claude/chat", {
       method: "POST",
       body: JSON.stringify({ workspaceId, message, ...options }),
@@ -163,6 +225,61 @@ export const api = {
     fetchJson<{ messages: ChatMessage[] }>(
       `/api/claude/messages?workspaceId=${workspaceId}`
     ),
+
+  paymentsConfig: () => fetchJson<PaymentsConfig>("/api/payments/config"),
+
+  submitPayment: (form: FormData) =>
+    fetchForm<{ ok: boolean; id: string; status: string }>("/api/payments/submit", form),
+
+  joinWaitlist: (email: string) =>
+    fetchJson<{ ok: boolean }>("/api/waitlist", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  adminMe: () => fetchJson<{ isAdmin: boolean }>("/api/admin/me"),
+
+  adminPending: () =>
+    fetchJson<{
+      items: {
+        id: string;
+        userId: string;
+        userEmail: string | null;
+        planId: string;
+        amount: number;
+        trxId: string;
+        receiptUrl: string | null;
+        createdAt: string;
+      }[];
+    }>("/api/admin/pending"),
+
+  adminReview: (id: string, action: "approve" | "reject") =>
+    fetchJson<{ ok: boolean }>("/api/admin/review", {
+      method: "POST",
+      body: JSON.stringify({ id, action }),
+    }),
+
+  adminUser: (userId: string) =>
+    fetchJson<{
+      plan: string;
+      expiresAt: string | null;
+      expired: boolean;
+      disabled: boolean;
+      today: number;
+      byModel: { modelId: string; requests: number; inputTokens: number; outputTokens: number }[];
+    }>(`/api/admin/user?userId=${encodeURIComponent(userId)}`),
+
+  adminSetPlan: (userId: string, planId: string, expiresAt: string | null) =>
+    fetchJson<{ ok: boolean }>("/api/admin/plan", {
+      method: "POST",
+      body: JSON.stringify({ userId, planId, expiresAt }),
+    }),
+
+  adminDisable: (userId: string, disabled: boolean) =>
+    fetchJson<{ ok: boolean }>("/api/admin/disable", {
+      method: "POST",
+      body: JSON.stringify({ userId, disabled }),
+    }),
 
   // Optional Telegram connector. The bot token is server-side only and never passes through here.
   telegramStatus: () => fetchJson<TelegramStatus>("/api/telegram/status"),

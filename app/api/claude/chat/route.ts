@@ -3,6 +3,7 @@ import { getAuthenticatedUser, getOwnedWorkspace, supabaseAdmin } from "@/lib/su
 import { sendToClaude, applyChanges, sanitizeError } from "@/lib/claude";
 import { EFFORTS, isPurpose, resolveModel } from "@/lib/ai";
 import type { Effort, ProviderResult, Usage } from "@/lib/ai";
+import { checkEntitlement } from "@/lib/entitlements";
 import { parseAttachments, sendResearch } from "@/lib/ai/research";
 import { logActivity } from "@/lib/activities";
 import { logUsage } from "@/lib/usage";
@@ -45,10 +46,24 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (model.config.purpose !== purpose) {
+    if (!model.config.purpose.includes(purpose)) {
       return NextResponse.json(
         { error: "This model is not allowed for the selected mode" },
         { status: 400 }
+      );
+    }
+    // Plan tier + daily quota, enforced server-side before any model call.
+    const entitlement = await checkEntitlement(userId, model.config.id, user!.email);
+    if (!entitlement.allowed) {
+      return NextResponse.json(
+        {
+          error: entitlement.messageEn,
+          messageKh: entitlement.messageKh,
+          messageEn: entitlement.messageEn,
+          quotaExceeded: entitlement.reason === "quota",
+          tierLocked: entitlement.reason === "tier",
+        },
+        { status: 429 }
       );
     }
     let effort: Effort | undefined;
@@ -126,6 +141,7 @@ export async function POST(req: Request) {
       }
     } catch (modelError: any) {
       const errMessage = sanitizeError(modelError);
+      const rateLimited = (modelError as any)?.status === 429;
       await supabaseAdmin
         .from("claude_sessions")
         .update({ status: "error", completed_at: new Date().toISOString() })
@@ -140,7 +156,10 @@ export async function POST(req: Request) {
         error: errMessage,
         status: "error",
       });
-      return NextResponse.json({ error: errMessage }, { status: 500 });
+      return NextResponse.json(
+        { error: errMessage, rateLimited },
+        { status: rateLimited ? 429 : 500 }
+      );
     }
 
     await logUsage({ userId, workspaceId, model, purpose, effort, usage });
@@ -189,6 +208,8 @@ export async function POST(req: Request) {
       proposedFiles: proposed,
       diff,
       applied,
+      usage,
+      model: { id: model.config.id, label: model.config.label, icon: model.config.icon },
     });
   } catch (error: any) {
     return NextResponse.json({ error: sanitizeError(error) }, { status: 500 });

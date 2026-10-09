@@ -108,6 +108,17 @@ export interface ClaudeResult {
   error?: string;
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface ChatModelInfo {
+  id: string;
+  label: string;
+  icon: string;
+}
+
 export interface CommandResult {
   stdout: string;
   stderr: string;

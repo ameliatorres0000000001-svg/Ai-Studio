@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "routes": {
     "gateway": {
       "format": "anthropic",
@@ -10,6 +10,16 @@
       "format": "openai",
       "baseUrlEnv": "AI_GATEWAY_OPENAI_BASE_URL",
       "keyEnv": "AI_GATEWAY_API_KEY"
+    },
+    "google": {
+      "format": "openai",
+      "baseUrlEnv": "GOOGLE_AI_BASE_URL",
+      "keyEnv": "GOOGLE_AI_API_KEY"
+    },
+    "openrouter": {
+      "format": "openai",
+      "baseUrlEnv": "OPENROUTER_BASE_URL",
+      "keyEnv": "OPENROUTER_API_KEY"
     },
     "anthropic": {
       "format": "anthropic",
@@ -23,58 +33,125 @@
   },
   "models": [
     {
-      "id": "code-standard",
-      "label": "Code Standard",
-      "purpose": "code",
+      "id": "haiku-fast",
+      "label": "Haiku Fast",
+      "purpose": ["code", "research"],
       "tier": "free",
       "route": "gateway",
-      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "upstreamModel": "claude-haiku-4-5",
+      "provider": "Anthropic",
+      "icon": "claude.png",
       "effortSupport": false
     },
     {
-      "id": "code-pro",
-      "label": "Code Pro",
-      "purpose": "code",
-      "tier": "pro",
-      "route": "anthropic",
-      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
-      "effortSupport": true
-    },
-    {
-      "id": "code-premium",
-      "label": "Code Premium",
-      "purpose": "code",
-      "tier": "premium",
-      "route": "bedrock",
-      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
-      "effortSupport": true
-    },
-    {
-      "id": "research-standard",
-      "label": "Research Standard",
-      "purpose": "research",
+      "id": "qwen-flash",
+      "label": "Qwen Flash",
+      "purpose": ["research"],
       "tier": "free",
       "route": "gateway-openai",
-      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "upstreamModel": "qwen-3.8-flash",
+      "provider": "Qwen",
+      "icon": "qwen.png",
       "effortSupport": false
     },
     {
-      "id": "research-pro",
-      "label": "Research Pro",
-      "purpose": "research",
+      "id": "glm-flash",
+      "label": "GLM Flash",
+      "purpose": ["research"],
+      "tier": "free",
+      "route": "gateway-openai",
+      "upstreamModel": "glm-5.3-flash",
+      "provider": "Zhipu",
+      "icon": "glm.png",
+      "effortSupport": false
+    },
+    {
+      "id": "sonnet",
+      "label": "Sonnet",
+      "purpose": ["code", "research"],
       "tier": "pro",
       "route": "gateway",
-      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "upstreamModel": "claude-sonnet-5",
+      "provider": "Anthropic",
+      "icon": "claude.png",
+      "effortSupport": false
+    },
+    {
+      "id": "gpt",
+      "label": "GPT",
+      "purpose": ["research"],
+      "tier": "pro",
+      "route": "gateway-openai",
+      "upstreamModel": "gpt-5.5",
+      "provider": "OpenAI",
+      "icon": "codex.png",
+      "effortSupport": false
+    },
+    {
+      "id": "deepseek",
+      "label": "DeepSeek",
+      "purpose": ["research"],
+      "tier": "pro",
+      "route": "gateway-openai",
+      "upstreamModel": "deepseek-3.2-thinking",
+      "provider": "DeepSeek",
+      "icon": "deepseek.png",
+      "effortSupport": false
+    },
+    {
+      "id": "kimi",
+      "label": "Kimi",
+      "purpose": ["research"],
+      "tier": "pro",
+      "route": "gateway-openai",
+      "upstreamModel": "kimi-k3",
+      "provider": "Moonshot",
+      "icon": "kimi.png",
+      "effortSupport": false
+    },
+    {
+      "id": "opus",
+      "label": "Opus",
+      "purpose": ["code", "research"],
+      "tier": "premium",
+      "route": "gateway",
+      "upstreamModel": "claude-opus-5-5",
+      "provider": "Anthropic",
+      "icon": "claude.png",
       "effortSupport": true
     },
     {
-      "id": "research-premium",
-      "label": "Research Premium",
-      "purpose": "research",
+      "id": "gpt-reasoning",
+      "label": "GPT Reasoning",
+      "purpose": ["research"],
       "tier": "premium",
-      "route": "anthropic",
-      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
-      "effortSupport": true
+      "route": "gateway-openai",
+      "upstreamModel": "gpt-5.5-reasoning",
+      "provider": "OpenAI",
+      "icon": "codex.png",
+      "effortSupport": false
+    },
+    {
+      "id": "grok",
+      "label": "Grok",
+      "purpose": ["research"],
+      "tier": "premium",
+      "route": "gateway-openai",
+      "upstreamModel": "grok-4-5",
+      "provider": "xAI",
+      "icon": "grok.png",
+      "effortSupport": false
+    },
+    {
+      "id": "gemini",
+      "label": "Gemini",
+      "purpose": ["research"],
+      "tier": "premium",
+      "route": "google",
+      "upstreamModel": "",
+      "provider": "Google",
+      "icon": "gemini.png",
+      "effortSupport": false
     }
   ]
 }
