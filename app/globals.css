@@ -371,6 +371,25 @@ header {
 .chat-loading { color: var(--primary); font-size: 13px; padding: 8px 0; display: flex; align-items: center; gap: 8px; }
 .chat-error { color: var(--error); font-size: 12px; padding: 8px 12px; background: var(--error-dim); border-radius: var(--radius-sm); }
 .chat-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.chat-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+.mode-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; }
+.mode-toggle button { background: var(--bg-0); color: var(--text-2); border: 0; padding: 8px 14px; min-height: 36px; font-size: 13px; cursor: pointer; transition: background var(--transition), color var(--transition); }
+.mode-toggle button + button { border-left: 1px solid var(--border); }
+.mode-toggle button.active { background: var(--primary-dim); color: var(--text-0); font-weight: 600; }
+.mode-toggle button:disabled { opacity: 0.5; cursor: not-allowed; }
+.chat-select { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; min-width: 0; }
+.chat-select span { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.chat-select select { width: 100%; min-height: 36px; background: var(--bg-0); color: var(--text-0); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; font-size: 13px; text-overflow: ellipsis; }
+.chat-select select:focus { outline: none; border-color: var(--primary); }
+.chat-select select:disabled { opacity: 0.5; }
+.chat-attach { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 12px; color: var(--text-2); flex-shrink: 0; }
+.chat-attach code { font-family: var(--font-mono); color: var(--text-1); word-break: break-all; }
+@media (max-width: 480px) {
+  .mode-toggle { width: 100%; }
+  .mode-toggle button { flex: 1; min-height: 40px; }
+  .chat-select { flex-basis: 100%; }
+  .chat-select select { min-height: 40px; font-size: 16px; }
+}
 .claude-result { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
 .claude-result p { font-size: 13px; color: var(--text-1); }
 .claude-result ul { margin: 8px 0; padding-left: 16px; color: var(--text-2); font-size: 12px; }

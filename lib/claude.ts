@@ -1,53 +1,28 @@
-import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import { readFileTree, resolveInside, writeFileContent, redactSecrets } from "./workspace";
+import { listAvailableModels, providerFor } from "./ai";
+import { CODE_SYSTEM_PROMPT } from "./ai/prompts";
+import type { Effort, ResolvedModel, Usage } from "./ai";
 
-// SERVER-ONLY. The API key is read from the environment and never leaves the server.
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514";
-const BASE_URL = process.env.ANTHROPIC_BASE_URL;
-const MAX_TOKENS = Number(process.env.ANTHROPIC_MAX_TOKENS) || 8192;
+// SERVER-ONLY. Code mode: repo-aware chat that proposes <<<FILE:path>>> edits.
+// Provider credentials are resolved server-side by lib/ai and never leave the server.
 const MAX_CONTEXT_FILE_CHARS = 60_000;
 const MAX_TREE_CHARS = 20_000;
 
 export function isClaudeConfigured(): boolean {
-  return !!process.env.ANTHROPIC_API_KEY;
+  return listAvailableModels().length > 0;
 }
-
-function getClient(): Anthropic {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY is not configured");
-  return new Anthropic({
-    apiKey: key,
-    ...(BASE_URL ? { baseURL: BASE_URL } : {}),
-  });
-}
-
-const SYSTEM_PROMPT = `You are Claude Code, an AI coding assistant integrated into Claude Code Studio.
-You help developers manage and edit their GitHub repositories.
-
-When asked to edit code:
-- Output the exact file path and the complete new file content in this format:
-  <<<FILE:path>>>
-  <full file content>
-  <<<ENDFILE>>>
-- You may output multiple file blocks.
-- Always output the COMPLETE file, not just the changed parts.
-
-When asked to explain or analyze:
-- Provide a clear, concise explanation.
-
-When asked to run commands:
-- Suggest the exact command the user should run. Do not claim you ran it.
-
-Always be direct and technical. Do not add unnecessary commentary.`;
 
 export interface ClaudeResponse {
   text: string;
   filesChanged: { path: string; content: string }[];
   diff: string | null;
+  usage: Usage;
 }
 
 export async function sendToClaude(
+  model: ResolvedModel,
+  effort: Effort | undefined,
   localPath: string,
   message: string,
   context?: {
@@ -57,8 +32,6 @@ export async function sendToClaude(
     telegram?: { botUsername: string | null };
   }
 ): Promise<ClaudeResponse> {
-  const client = getClient();
-
   let userContent = message;
 
   if (context?.telegram) {
@@ -79,16 +52,14 @@ export async function sendToClaude(
   const fileTreeText = JSON.stringify(tree).slice(0, MAX_TREE_CHARS);
   userContent += `\n\n--- Project file tree ---\n${fileTreeText}`;
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userContent }],
-  });
-
-  const text = response.content
-    .map((b) => (b.type === "text" ? b.text : ""))
-    .join("");
+  const { text, usage } = await providerFor(model.route.format).send(
+    [
+      { role: "system", content: CODE_SYSTEM_PROMPT },
+      { role: "user", content: userContent },
+    ],
+    model,
+    effort
+  );
 
   const filesChanged: { path: string; content: string }[] = [];
   const fileRegex = /<<<FILE:(.+?)>>>\n([\s\S]*?)\n<<<ENDFILE>>>/g;
@@ -132,7 +103,7 @@ export async function sendToClaude(
     diff = parts.join("\n");
   }
 
-  return { text, filesChanged, diff };
+  return { text, filesChanged, diff, usage };
 }
 
 export function stripFileBlocks(text: string, applied: boolean): string {

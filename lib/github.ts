@@ -54,7 +54,7 @@ export async function listRepositories(): Promise<GitHubRepo[]> {
   const data = await octokit.paginate(octokit.rest.repos.listForAuthenticatedUser, {
     sort: "updated",
     per_page: 100,
-    type: "all",
+    type: "owner",
   });
   return data
     .filter((r) => isRepoAllowed(r.full_name))

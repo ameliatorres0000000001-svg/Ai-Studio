@@ -7,6 +7,9 @@ import type {
   ChatMessage,
   CommandResult,
   TelegramStatus,
+  ModelOption,
+  ChatPurpose,
+  ChatEffort,
 } from "./types";
 import { supabase } from "./supabase-client";
 
@@ -131,10 +134,19 @@ export const api = {
       { method: "POST", body: JSON.stringify({ workspaceId, files }) }
     ),
 
+  getModels: () => fetchJson<{ models: ModelOption[] }>("/api/models"),
+
   claudeChat: (
     workspaceId: string,
     message: string,
-    options?: { currentFile?: string; fileContent?: string }
+    options?: {
+      modelId?: string;
+      purpose?: ChatPurpose;
+      effort?: ChatEffort;
+      currentFile?: string;
+      fileContent?: string;
+      attachments?: { path: string; content: string }[];
+    }
   ) =>
     fetchJson<{
       response: string;

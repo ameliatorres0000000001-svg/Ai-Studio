@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "routes": {
+    "gateway": {
+      "format": "anthropic",
+      "baseUrlEnv": "AI_GATEWAY_BASE_URL",
+      "keyEnv": "AI_GATEWAY_API_KEY"
+    },
+    "gateway-openai": {
+      "format": "openai",
+      "baseUrlEnv": "AI_GATEWAY_OPENAI_BASE_URL",
+      "keyEnv": "AI_GATEWAY_API_KEY"
+    },
+    "anthropic": {
+      "format": "anthropic",
+      "keyEnv": "ANTHROPIC_API_KEY"
+    },
+    "bedrock": {
+      "format": "anthropic",
+      "baseUrlEnv": "BEDROCK_BASE_URL",
+      "keyEnv": "BEDROCK_API_KEY"
+    }
+  },
+  "models": [
+    {
+      "id": "code-standard",
+      "label": "Code Standard",
+      "purpose": "code",
+      "tier": "free",
+      "route": "gateway",
+      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "effortSupport": false
+    },
+    {
+      "id": "code-pro",
+      "label": "Code Pro",
+      "purpose": "code",
+      "tier": "pro",
+      "route": "anthropic",
+      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "effortSupport": true
+    },
+    {
+      "id": "code-premium",
+      "label": "Code Premium",
+      "purpose": "code",
+      "tier": "premium",
+      "route": "bedrock",
+      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "effortSupport": true
+    },
+    {
+      "id": "research-standard",
+      "label": "Research Standard",
+      "purpose": "research",
+      "tier": "free",
+      "route": "gateway-openai",
+      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "effortSupport": false
+    },
+    {
+      "id": "research-pro",
+      "label": "Research Pro",
+      "purpose": "research",
+      "tier": "pro",
+      "route": "gateway",
+      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "effortSupport": true
+    },
+    {
+      "id": "research-premium",
+      "label": "Research Premium",
+      "purpose": "research",
+      "tier": "premium",
+      "route": "anthropic",
+      "upstreamModel": "TODO_SET_UPSTREAM_MODEL",
+      "effortSupport": true
+    }
+  ]
+}
