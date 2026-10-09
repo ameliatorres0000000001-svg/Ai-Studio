@@ -2,9 +2,20 @@
 
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
-import type { ChatMessage } from "@/lib/types";
-import { useLang } from "@/lib/i18n";
+import type { ChatMessage, ChatEffort, ChatPurpose, ModelOption } from "@/lib/types";
+import { useLang, type TKey } from "@/lib/i18n";
 import { Button, EmptyState } from "@/components/ui";
+
+const EFFORT_OPTIONS: { value: ChatEffort; key: TKey }[] = [
+  { value: "low", key: "effortLow" },
+  { value: "medium", key: "effortMedium" },
+  { value: "high", key: "effortHigh" },
+];
+const TIER_KEY: Record<ModelOption["tier"], TKey> = {
+  free: "tierFree",
+  pro: "tierPro",
+  premium: "tierPremium",
+};
 
 export function ClaudeChat({
   workspaceId,
@@ -29,6 +40,35 @@ export function ClaudeChat({
     applied: boolean;
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [models, setModels] = useState<ModelOption[] | null>(null);
+  const [purpose, setPurpose] = useState<ChatPurpose>("code");
+  const [selected, setSelected] = useState<Partial<Record<ChatPurpose, string>>>({});
+  const [effort, setEffort] = useState<ChatEffort>("medium");
+  const [attachFile, setAttachFile] = useState(false);
+
+  useEffect(() => {
+    api
+      .getModels()
+      .then(({ models }) => {
+        setModels(models);
+        const first = (p: ChatPurpose) => models.find((m) => m.purpose === p)?.id;
+        setSelected({ code: first("code"), research: first("research") });
+        setPurpose(first("code") ? "code" : "research");
+      })
+      .catch(() => setModels([]));
+  }, []);
+
+  const modelId = selected[purpose];
+  const currentModel = models?.find((m) => m.id === modelId);
+  const canAttach = purpose === "research" && !!currentFile && fileContent !== undefined;
+
+  function chooseModel(id: string) {
+    const m = models?.find((x) => x.id === id);
+    if (!m) return;
+    setPurpose(m.purpose);
+    setSelected((prev) => ({ ...prev, [m.purpose]: id }));
+  }
 
   useEffect(() => {
     async function load() {
@@ -65,7 +105,7 @@ export function ClaudeChat({
   }
 
   async function send(apply: boolean = false) {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !modelId) return;
     const userMsg = input;
     setInput("");
     setLoading(true);
@@ -84,10 +124,24 @@ export function ClaudeChat({
     ]);
 
     try {
-      const result = await api.claudeChat(workspaceId, userMsg, {
-        currentFile,
-        fileContent,
-      });
+      const result =
+        purpose === "research"
+          ? await api.claudeChat(workspaceId, userMsg, {
+              modelId,
+              purpose,
+              effort: currentModel?.effortSupport ? effort : undefined,
+              attachments:
+                attachFile && canAttach
+                  ? [{ path: currentFile!, content: fileContent! }]
+                  : undefined,
+            })
+          : await api.claudeChat(workspaceId, userMsg, {
+              modelId,
+              purpose,
+              effort: currentModel?.effortSupport ? effort : undefined,
+              currentFile,
+              fileContent,
+            });
 
       setMessages((prev) => [
         ...prev,
@@ -135,7 +189,62 @@ export function ClaudeChat({
         </div>
       </div>
 
-      {currentFile && (
+      <div className="chat-controls">
+        <div className="mode-toggle" role="group" aria-label={t("modelLabel")}>
+          {(["code", "research"] as ChatPurpose[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={purpose === p ? "active" : ""}
+              aria-pressed={purpose === p}
+              disabled={loading || !selected[p]}
+              onClick={() => setPurpose(p)}
+            >
+              {t(p === "code" ? "modeCode" : "modeResearch")}
+            </button>
+          ))}
+        </div>
+        <label className="chat-select">
+          <span>{t("modelLabel")}</span>
+          <select
+            value={modelId ?? ""}
+            onChange={(e) => chooseModel(e.target.value)}
+            disabled={loading || !models?.length}
+          >
+            {(["code", "research"] as ChatPurpose[]).map((p) => {
+              const group = (models ?? []).filter((m) => m.purpose === p);
+              if (group.length === 0) return null;
+              return (
+                <optgroup key={p} label={t(p === "code" ? "modeCode" : "modeResearch")}>
+                  {group.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label} · {t(TIER_KEY[m.tier])}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+        </label>
+        <label className="chat-select">
+          <span>{t("effortLabel")}</span>
+          <select
+            value={effort}
+            onChange={(e) => setEffort(e.target.value as ChatEffort)}
+            disabled={loading || !currentModel?.effortSupport}
+          >
+            {EFFORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {t(o.key)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {models && models.length === 0 && <div className="chat-error">{t("noModels")}</div>}
+
+      {purpose === "code" && currentFile && (
         <div className="chat-context-file">
           <span className="badge badge-neutral" style={{ fontFamily: "var(--font-mono)" }}>
             {currentFile}
@@ -192,28 +301,54 @@ export function ClaudeChat({
         </div>
       )}
 
+      {canAttach && (
+        <label className="chat-attach">
+          <input
+            type="checkbox"
+            checked={attachFile}
+            onChange={(e) => setAttachFile(e.target.checked)}
+            disabled={loading}
+          />
+          <span>
+            {t("attachCurrentFile")}: <code>{currentFile}</code>
+          </span>
+        </label>
+      )}
+
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder={t("messagePlaceholder")}
+        placeholder={t(purpose === "research" ? "researchPlaceholder" : "messagePlaceholder")}
         disabled={loading}
       />
       <div className="chat-actions">
-        <Button
-          variant="secondary"
-          onClick={() => send(false)}
-          disabled={loading || !input.trim()}
-          className="btn-block"
-        >
-          {t("analyze")}
-        </Button>
-        <Button
-          onClick={() => send(true)}
-          disabled={loading || !input.trim()}
-          className="btn-block"
-        >
-          {t("editProject")}
-        </Button>
+        {purpose === "research" ? (
+          <Button
+            onClick={() => send(false)}
+            disabled={loading || !modelId || !input.trim()}
+            className="btn-block"
+          >
+            {t("sendMessage")}
+          </Button>
+        ) : (
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => send(false)}
+              disabled={loading || !modelId || !input.trim()}
+              className="btn-block"
+            >
+              {t("analyze")}
+            </Button>
+            <Button
+              onClick={() => send(true)}
+              disabled={loading || !modelId || !input.trim()}
+              className="btn-block"
+            >
+              {t("editProject")}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

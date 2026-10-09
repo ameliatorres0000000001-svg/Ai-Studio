@@ -582,11 +582,6 @@ function IDEWorkspace({
 
 function SettingsView({ githubStatus }: { githubStatus: any }) {
   const { t } = useLang();
-  const [health, setHealth] = useState<{ claude: boolean; supabase: boolean; vercel: boolean } | null>(null);
-
-  useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null));
-  }, []);
   return (
     <div className="panel">
       <div className="panel-header">
@@ -610,23 +605,15 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
 
       <div className="settings-section">
         <h4><BrandIcon name="claude" /> {t("claudeSetting")}</h4>
-        <p>Status: <StatusBadge status={health?.claude ? "connected" : "disconnected"} /></p>
-        {!health?.claude && (
-          <div className="setup-box">
-            <p>Set <code>ANTHROPIC_API_KEY</code> in the deployment environment, then redeploy the app.</p>
-            <p>If your provider uses an Anthropic-compatible gateway, also set <code>ANTHROPIC_BASE_URL</code> and <code>ANTHROPIC_MODEL</code>.</p>
-          </div>
-        )}
+        <p>Status: <StatusBadge status="disconnected" /></p>
+        <div className="setup-box">
+          <p>Get an API key from console.anthropic.com and set <code>ANTHROPIC_API_KEY</code> in your <code>.env</code> file.</p>
+        </div>
       </div>
 
       <div className="settings-section">
         <h4><BrandIcon name="supabase" /> {t("supabaseSetting")}</h4>
-        <p>Status: <StatusBadge status={health?.supabase ? "connected" : "disconnected"} /></p>
-        {!health?.supabase && (
-          <div className="setup-box">
-            <p>The server database connection is incomplete. The deployment needs its server-only Supabase access key.</p>
-          </div>
-        )}
+        <p>Status: <StatusBadge status="connected" /></p>
       </div>
 
       <div className="settings-section">
@@ -636,12 +623,10 @@ function SettingsView({ githubStatus }: { githubStatus: any }) {
 
       <div className="settings-section">
         <h4>{t("vercelSetting")} & {t("railwaySetting")}</h4>
-        <p>Status: <StatusBadge status={health?.vercel ? "connected" : "disconnected"} /></p>
-        {!health?.vercel && (
-          <div className="setup-box">
-            <p>Vercel deployment is not connected. Add <code>VERCEL_TOKEN</code> to enable deployments.</p>
-          </div>
-        )}
+        <p>Status: <StatusBadge status="disconnected" /></p>
+        <div className="setup-box">
+          <p>Set <code>VERCEL_TOKEN</code> and <code>RAILWAY_TOKEN</code> in your <code>.env</code> file to enable deployments.</p>
+        </div>
       </div>
 
       <div className="settings-section">
@@ -651,8 +636,6 @@ GITHUB_ACCESS_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 
 # Anthropic / Claude Code
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxx
-ANTHROPIC_BASE_URL=https://api.anthropic.com
-ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 # Vercel (deployment)
 VERCEL_TOKEN=

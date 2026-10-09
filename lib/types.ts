@@ -1,3 +1,9 @@
+import type { PublicModel, Purpose, Effort } from "./ai/types";
+
+export type ChatPurpose = Purpose;
+export type ChatEffort = Effort;
+export type ModelOption = PublicModel;
+
 export interface GitHubRepo {
   id: number;
   full_name: string;
