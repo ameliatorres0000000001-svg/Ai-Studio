@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser, supabaseAdmin } from "@/lib/supabase-server";
+import { getAuthenticatedUser, supabaseAdmin, toPublicWorkspace } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +17,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ workspaces: data });
+  return NextResponse.json({ workspaces: (data || []).map(toPublicWorkspace) });
 }

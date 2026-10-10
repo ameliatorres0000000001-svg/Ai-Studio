@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepoInfo, getCloneUrl, isGitHubConfigured } from "@/lib/github";
 import { cloneRepo, pullLatest, getWorkspacePath } from "@/lib/workspace";
-import { getAuthenticatedUser, supabaseAdmin, getOwnedWorkspace } from "@/lib/supabase-server";
+import { getAuthenticatedUser, supabaseAdmin, getOwnedWorkspace, toPublicWorkspace } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activities";
 import fs from "fs";
 
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
       .eq("id", workspaceId)
       .single();
 
-    return NextResponse.json({ workspace: ws });
+    return NextResponse.json({ workspace: ws ? toPublicWorkspace(ws) : ws });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

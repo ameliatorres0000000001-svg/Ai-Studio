@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       if (row.chat_id) {
         await sendMessage(
           row.chat_id,
-          "✅ Claude Code Studio: Telegram connection test succeeded."
+          "✅ CodingStudio: Telegram connection test succeeded."
         );
         sentToChat = true;
       }

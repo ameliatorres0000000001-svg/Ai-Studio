@@ -1,0 +1,6 @@
+# Replace studio.YOUR_DOMAIN with the real domain, then: caddy reload
+# Caddy terminates TLS automatically and proxies to the PM2'd Next.js server.
+studio.YOUR_DOMAIN {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+}

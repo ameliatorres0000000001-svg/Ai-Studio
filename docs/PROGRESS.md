@@ -39,6 +39,26 @@ Phase C — subscription + admin
 
 Verify: `npm run typecheck` ✅ · `npm run build` ✅ · `npm run test:quota` 7/7 ✅
 
+## Done (Phase D, 2026-10-10)
+
+- Removed `netlify.toml` + `@netlify/plugin-nextjs` (VPS-only; serverless
+  can't keep workspaces).
+- `npm start` → `next start -p 3000 -H 127.0.0.1`; new `ecosystem.config.js`
+  (PM2 fork, 1G restart) + `Caddyfile` (studio.YOUR_DOMAIN → 127.0.0.1:3000).
+- `next.config.js` security headers: CSP (self + fonts.googleapis.com,
+  fonts.gstatic.com, telegram.org, oauth.telegram.org; Supabase origin in
+  connect-src), nosniff, SAMEORIGIN, strict referrer, no camera/mic/geo, HSTS.
+- `local_path` never reaches the browser: list + sync routes return
+  `toPublicWorkspace()`; server re-derives the path per request.
+- NEW migration `20261010010000_drop_allow_all_policies.sql` (never run):
+  drops any `USING (true)` policy on any app table + revokes anon everywhere
+  and client writes on service-only tables. Rerunnable.
+- README rewritten (CodingStudio, VPS quick start, feature/setup/security
+  summary). New docs: ARCHITECTURE.md, ROADMAP.md, DEPLOY-VPS.md
+  (env NAMES, migration order 1–8, BotFather /setdomain).
+
+Verify: typecheck ✅ · build ✅
+
 ## Next
 - Apply migrations in Supabase dashboard (SQL editor), set env vars
   (see Settings tab env list), create `receipts` bucket (private; auto-created

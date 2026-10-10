@@ -5,13 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3000 -H 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test:quota": "node scripts/test-quota.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
-    "@netlify/plugin-nextjs": "^5.16.2",
     "@octokit/rest": "^22.0.1",
     "@supabase/supabase-js": "^2.117.2",
     "next": "14.2.35",

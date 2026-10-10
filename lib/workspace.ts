@@ -239,7 +239,7 @@ export async function commitAndPush(
 
   await git.addConfig(
     "user.name",
-    process.env.GIT_COMMIT_NAME || "Claude Code Studio",
+    process.env.GIT_COMMIT_NAME || "CodingStudio",
     false,
     "local"
   );
