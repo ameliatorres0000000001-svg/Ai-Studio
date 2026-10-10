@@ -146,7 +146,7 @@ export const api = {
     }),
 
   health: () =>
-    fetchJson<{ github: boolean; claude: boolean; supabase: boolean; vercel: boolean }>(
+    fetchJson<{ github: boolean; claude: boolean; models?: boolean; supabase: boolean; vercel: boolean; telegram?: boolean }>(
       "/api/health"
     ),
 

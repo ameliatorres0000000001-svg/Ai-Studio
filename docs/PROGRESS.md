@@ -59,6 +59,22 @@ Verify: `npm run typecheck` ✅ · `npm run build` ✅ · `npm run test:quota` 7
 
 Verify: typecheck ✅ · build ✅
 
+## Done (Phase E, 2026-10-10)
+
+- `scripts/check-setup.mjs` (NEW): reads `.env.local` itself, prints ONLY
+  OK/FAIL lines, never values. Checks every env NAME from `.env.example`,
+  Supabase query + 12 required tables (missing → creating migration file),
+  GitHub GET /user (login only), per-route model env gaps (no model calls),
+  Telegram token set or not (no network).
+- `npm run check:setup` script added.
+- `GET /api/health` now admin-only (ADMIN_EMAILS); returns the same booleans
+  as the dashboard dots: github, claude/models, supabase, vercel, telegram.
+- New doc `docs/SETUP-CHECKLIST.md` (Khmer): fill `.env.local` (names only),
+  8 migrations in order, first admin via ADMIN_EMAILS, BotFather /setdomain,
+  run check.
+
+Verify: typecheck ✅ · build ✅
+
 ## Next
 - Apply migrations in Supabase dashboard (SQL editor), set env vars
   (see Settings tab env list), create `receipts` bucket (private; auto-created

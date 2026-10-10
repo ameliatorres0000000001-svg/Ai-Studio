@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start -p 3000 -H 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test:quota": "node scripts/test-quota.mjs"
+    "test:quota": "node scripts/test-quota.mjs",
+    "check:setup": "node scripts/check-setup.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
