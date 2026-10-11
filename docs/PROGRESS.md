@@ -95,6 +95,23 @@ Verify: typecheck ✅ · build ✅
 
 Verify: typecheck ✅ · build ✅
 
+## Done (Phase G — Bot Builder hardening + last mile, 2026-10-11)
+
+- `templates/shop-bot/api/webhook.js`: verifies Telegram's
+  `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET`
+  (timing-safe compare, 401 on mismatch; unset = old behaviour so existing
+  deployments don't break). Closes the gap where anyone knowing the webhook
+  URL could POST fake orders to the admin chat.
+- `templates/shop-bot/README.md`: documents the secret + `secret_token=` in
+  the `setWebhook` URL, and what to do if the bot goes silent after adding it.
+- `/api/bot-builder/generate` now returns bilingual `nextSteps`
+  ({km,en}) + `envVars`, so the UI can guide non-technical users.
+- `components/BotBuilderChat.tsx`: KH/EN via `useLang`, copy-to-clipboard env
+  chips, warnings panel, friendly errors (admin-only / quota / no GitHub).
+  New `.bot-builder-*` styles in `globals.css`.
+
+Verify: typecheck ✅ · build ✅
+
 ## Next
 - Apply migrations in Supabase dashboard (SQL editor), set env vars
   (see Settings tab env list), create `receipts` bucket (private; auto-created

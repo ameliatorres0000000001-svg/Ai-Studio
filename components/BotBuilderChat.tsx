@@ -2,8 +2,18 @@
 
 import { useState, useRef, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 import type { BotBuilderMessage, BotSpec } from "@/lib/bot-builder/types";
-import { Button, Spinner, ErrorState, Panel } from "@/components/ui";
+import { Button, Spinner, ErrorState, Panel, Badge } from "@/components/ui";
+
+interface GenerateResult {
+  repoUrl: string;
+  owner: string;
+  repo: string;
+  warnings: string[];
+  envVars: string[];
+  nextSteps: { km: string; en: string }[];
+}
 
 /**
  * A plain chat box for the no-code Bot Builder: the user describes the bot
@@ -12,6 +22,8 @@ import { Button, Spinner, ErrorState, Panel } from "@/components/ui";
  * file tree, no diff viewer, no terminal.
  */
 export function BotBuilderChat() {
+  const { lang } = useLang();
+  const kh = lang === "kh";
   const [messages, setMessages] = useState<BotBuilderMessage[]>([
     {
       role: "assistant",
@@ -22,7 +34,8 @@ export function BotBuilderChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [spec, setSpec] = useState<BotSpec | null>(null);
-  const [result, setResult] = useState<{ repoUrl: string; nextSteps: string[] } | null>(null);
+  const [result, setResult] = useState<GenerateResult | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,7 +57,7 @@ export function BotBuilderChat() {
         setSpec(turn.spec);
       }
     } catch (e: any) {
-      setError(e.message || "មានបញ្ហា");
+      setError(friendlyError(e, kh));
     } finally {
       setLoading(false);
     }
@@ -55,21 +68,30 @@ export function BotBuilderChat() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.botBuilderGenerate(spec);
-      setResult(res);
+      setResult(await api.botBuilderGenerate(spec));
     } catch (e: any) {
-      setError(e.message || "មិនអាចបង្កើត bot បានទេ");
+      setError(friendlyError(e, kh));
     } finally {
       setLoading(false);
     }
   }
 
+  async function copy(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(value);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      setCopied(null);
+    }
+  }
+
   return (
-    <Panel title="បង្កើត Telegram Bot (មិនចាំបាច់ចេះ code)">
+    <Panel title={kh ? "បង្កើត Telegram Bot (មិនចាំបាច់ចេះ code)" : "Build a Telegram Bot (no coding needed)"}>
       <div ref={scrollRef} className="bot-builder-thread" style={{ maxHeight: 420, overflowY: "auto" }}>
         {messages.map((m, i) => (
           <div key={i} className={`chat-msg ${m.role}`}>
-            <small>{m.role === "user" ? "អ្នក" : "Bot Builder"}</small>
+            <small>{m.role === "user" ? (kh ? "អ្នក" : "You") : "Bot Builder"}</small>
             <p>{m.content}</p>
           </div>
         ))}
@@ -83,12 +105,12 @@ export function BotBuilderChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="វាយសារនៅទីនេះ..."
+            placeholder={kh ? "វាយសារនៅទីនេះ..." : "Type your message…"}
             disabled={loading}
             style={{ flex: 1 }}
           />
           <Button onClick={send} disabled={loading || !input.trim()}>
-            {loading ? <Spinner /> : "ផ្ញើ"}
+            {loading ? <Spinner /> : kh ? "ផ្ញើ" : "Send"}
           </Button>
         </div>
       )}
@@ -96,10 +118,18 @@ export function BotBuilderChat() {
       {spec && !result && (
         <div style={{ marginTop: 16 }}>
           <p>
-            ត្រៀមបង្កើត <b>{spec.bot_name}</b> ({spec.bot_type}) ហើយ — ចុចប៊ូតុងខាងក្រោមដើម្បីបង្កើត repo ។
+            {kh ? (
+              <>
+                ត្រៀមបង្កើត <b>{spec.bot_name}</b> ({spec.bot_type}) ហើយ — ចុចប៊ូតុងខាងក្រោមដើម្បីបង្កើត repo ។
+              </>
+            ) : (
+              <>
+                Ready to build <b>{spec.bot_name}</b> ({spec.bot_type}) — press the button to create the repo.
+              </>
+            )}
           </p>
           <Button onClick={generate} disabled={loading}>
-            {loading ? <Spinner label="កំពុងបង្កើត..." /> : "បង្កើត Bot ឥឡូវនេះ"}
+            {loading ? <Spinner label={kh ? "កំពុងបង្កើត..." : "Creating…"} /> : kh ? "បង្កើត Bot ឥឡូវនេះ" : "Create the bot now"}
           </Button>
         </div>
       )}
@@ -107,18 +137,61 @@ export function BotBuilderChat() {
       {result && (
         <div style={{ marginTop: 16 }}>
           <p>
-            ✅ បានបង្កើតរួចរាល់!{" "}
+            ✅ {kh ? "បានបង្កើតរួចរាល់!" : "Done!"}{" "}
             <a href={result.repoUrl} target="_blank" rel="noreferrer">
-              បើក repo
+              {kh ? "បើក repo" : "Open the repo"}
             </a>
           </p>
-          <ol>
+
+          {result.warnings.length > 0 && (
+            <div className="bot-builder-note">
+              {result.warnings.map((w, i) => (
+                <div key={i}>⚠ {w}</div>
+              ))}
+            </div>
+          )}
+
+          <h4 className="bot-builder-h">
+            {kh ? "ជំហានបន្ទាប់ (ធ្វើម្ដងប៉ុណ្ណោះ)" : "Next steps (one time)"}
+          </h4>
+          <ol className="bot-builder-steps">
             {result.nextSteps.map((s, i) => (
-              <li key={i}>{s}</li>
+              <li key={i}>{kh ? s.km : s.en}</li>
             ))}
           </ol>
+
+          {result.envVars.length > 0 && (
+            <>
+              <h4 className="bot-builder-h">{kh ? "env ដែលត្រូវដាក់លើ Vercel" : "Env vars to set on Vercel"}</h4>
+              <div className="bot-builder-envs">
+                {result.envVars.map((v) => (
+                  <button key={v} type="button" className="bot-builder-env" onClick={() => copy(v)} title={kh ? "ចម្លង" : "Copy"}>
+                    <code>{v}</code>
+                    <span>{copied === v ? (kh ? "បានចម្លង" : "copied") : kh ? "ចម្លង" : "copy"}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          <Badge variant="info">{kh ? "repo ជា private" : "private repo"}</Badge>
         </div>
       )}
     </Panel>
   );
+}
+
+/** Turns raw API errors into something a non-technical user can act on. */
+function friendlyError(e: any, kh: boolean): string {
+  const msg = e?.message || "";
+  if (msg.includes("admin-only")) {
+    return kh ? "មុខងារនេះសម្រាប់តែ admin ប៉ុណ្ណោះនៅពេលនេះ។" : "This feature is admin-only for now.";
+  }
+  if (msg.includes("quota") || msg.includes("limit")) {
+    return kh ? "អ្នកបានប្រើអស់កម្រិតថ្ងៃនេះហើយ។" : "You've reached today's limit.";
+  }
+  if (msg.includes("GitHub not configured")) {
+    return kh ? "GitHub token មិនទាន់កំណត់លើ server។" : "GitHub token is not configured on the server.";
+  }
+  return msg || (kh ? "មានបញ្ហា សូមព្យាយាមម្ដងទៀត។" : "Something went wrong, please try again.");
 }

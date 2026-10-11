@@ -18,6 +18,7 @@ In the Vercel project settings, add:
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | From `@BotFather` → `/newbot` (or `/token` for an existing bot) |
 | `ADMIN_CHAT_ID` | See below |
+| `TELEGRAM_WEBHOOK_SECRET` | Recommended. Any long random string you invent (e.g. 32 random letters) — you paste the same value into `setWebhook` in step 3. Without it, anyone who guesses your webhook URL can send fake orders to your admin chat. |
 
 ### Finding your admin chat id
 
@@ -27,13 +28,19 @@ In the Vercel project settings, add:
 
 ## 3. Point Telegram at your deployment
 
-After deploying, visit this URL once (replace both placeholders):
+After deploying, visit this URL once (replace every placeholder, including
+`<YOUR_SECRET>` with the `TELEGRAM_WEBHOOK_SECRET` you set above — remove
+`&secret_token=...` only if you chose not to set that variable):
 
 ```
-https://api.telegram.org/bot<YOUR_TOKEN>/setWebhook?url=https://<your-deployment>.vercel.app/api/webhook
+https://api.telegram.org/bot<YOUR_TOKEN>/setWebhook?url=https://<your-deployment>.vercel.app/api/webhook&secret_token=<YOUR_SECRET>
 ```
 
 You should see `{"ok":true,"result":true,...}`.
+
+If your bot suddenly stops responding after adding the secret, re-run the URL —
+Telegram only sends the secret header for the value registered at the most
+recent `setWebhook` call.
 
 ## 4. Test it
 

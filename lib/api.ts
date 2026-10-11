@@ -317,7 +317,8 @@ export const api = {
       owner: string;
       repo: string;
       warnings: string[];
-      nextSteps: string[];
+      envVars: string[];
+      nextSteps: { km: string; en: string }[];
     }>("/api/bot-builder/generate", {
       method: "POST",
       body: JSON.stringify({ spec }),

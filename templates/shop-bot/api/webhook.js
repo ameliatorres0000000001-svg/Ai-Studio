@@ -5,6 +5,7 @@
 // This file holds ALL of the bot's logic. Everyday changes (shop name, products,
 // prices, payment method) belong in /config/bot.json, not here.
 
+const crypto = require("crypto");
 const { sendMessage, answerCallbackQuery } = require("../lib/telegram");
 const config = require("../config/bot.json");
 
@@ -114,9 +115,28 @@ function extractPendingOrderIndex(repliedToText) {
   return m ? Number(m[1]) : null;
 }
 
+/**
+ * Telegram echoes the secret_token given at setWebhook time back in this header.
+ * Without it, anyone who learns the webhook URL could POST fake updates and spam
+ * the admin with bogus orders. When TELEGRAM_WEBHOOK_SECRET is unset we keep the
+ * old behaviour so existing deployments don't break — see README step 3.
+ */
+function isTrustedRequest(req) {
+  const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (!expected) return true;
+  const got = req.headers["x-telegram-bot-api-secret-token"];
+  if (typeof got !== "string" || got.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected));
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.status(200).send("ok");
+    return;
+  }
+
+  if (!isTrustedRequest(req)) {
+    res.status(401).send("unauthorized");
     return;
   }
 

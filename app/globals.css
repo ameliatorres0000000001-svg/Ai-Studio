@@ -874,3 +874,15 @@ a:has(> .dashboard-feature-card):hover .dashboard-feature-card { border-color: v
 .dashboard-project-stack { color: var(--text-3); font-size: 11px; margin-top: 2px; }
 .dashboard-getting-started ol { margin: 0 0 14px; padding-left: 18px; color: var(--text-1); font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
 .bot-builder-thread { display: flex; flex-direction: column; gap: 10px; }
+.bot-builder-h { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); }
+.bot-builder-steps { margin: 0; padding-left: 18px; color: var(--text-1); font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.bot-builder-note { margin-top: 10px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--warning-dim); color: var(--warning); font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.bot-builder-envs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bot-builder-env {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 6px 10px; color: var(--text-1); font-size: 12px;
+}
+.bot-builder-env:hover { border-color: var(--border-hover); }
+.bot-builder-env code { font-family: var(--font-mono); font-size: 11px; color: var(--text-0); }
+.bot-builder-env span { color: var(--text-3); font-size: 11px; }

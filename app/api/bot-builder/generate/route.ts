@@ -87,11 +87,28 @@ export async function POST(req: Request) {
       owner: repo.owner,
       repo: repo.repo,
       warnings,
+      envVars: ["TELEGRAM_BOT_TOKEN", "ADMIN_CHAT_ID", "TELEGRAM_WEBHOOK_SECRET"],
       nextSteps: [
-        "Deploy the new repo to Vercel.",
-        "Set TELEGRAM_BOT_TOKEN (and ADMIN_CHAT_ID) in the Vercel project's environment variables.",
-        "Call Telegram's setWebhook once, pointing at https://<your-deployment>.vercel.app/api/webhook.",
-        "Message your bot /start to test it.",
+        {
+          km: "Deploy repo នេះទៅ Vercel (Import Project → ជ្រើស repo នេះ)។ មិនចាំបាច់កំណត់ build step ទេ។",
+          en: "Deploy this repo to Vercel (Import Project → pick this repo). No build step needed.",
+        },
+        {
+          km: "ក្នុង Vercel project settings បន្ថែម env: TELEGRAM_BOT_TOKEN និង ADMIN_CHAT_ID។",
+          en: "In the Vercel project settings add TELEGRAM_BOT_TOKEN and ADMIN_CHAT_ID.",
+        },
+        {
+          km: "ណែនាំបន្ថែម TELEGRAM_WEBHOOK_SECRET ជា string ចៃដន្យវែងៗ — ការពារកុំឲ្យអ្នកដទៃបញ្ជូន order ក្លែងក្លាយមក admin។",
+          en: "Recommended: add TELEGRAM_WEBHOOK_SECRET (a long random string) so nobody can POST fake orders to your admin.",
+        },
+        {
+          km: "ហៅ setWebhook ម្ដង ដោយដាក់ url ជា https://<deployment>.vercel.app/api/webhook និង secret_token ដូចគ្នានឹង env ខាងលើ។",
+          en: "Call setWebhook once with url=https://<deployment>.vercel.app/api/webhook and the same secret_token.",
+        },
+        {
+          km: "សាកផ្ញើ /start ទៅ bot របស់អ្នក។",
+          en: "Message your bot /start to test it.",
+        },
       ],
     });
   } catch (error: any) {
