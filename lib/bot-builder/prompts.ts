@@ -24,7 +24,9 @@ RULES:
 
 Required fields to collect before calling submit_bot_spec:
   bot_type, bot_name, language ("km" | "en" | "both"),
-  description, products (if bot_type is "shop" — name/price/description pairs; at least one real example is enough, the user can add more later in the admin panel),
+  description,
+  products (if bot_type is "shop" — name/price/description pairs; at least one real example is enough, the user can add more later in the admin panel),
+  faq (if bot_type is "chat" — 3-6 question/answer pairs drawn from what the user tells you; for each one also give 2-4 "keywords": the words a customer would actually type to reach that answer, in Khmer and English),
   payment_method ("manual" | "telegram_invoice" | "external_link"),
   payment_details (if external_link: the ABA/Wing/Bakong payment link the user already has; if telegram_invoice: note that they will still need to get a provider token from BotFather),
   admin_telegram_username (who receives order notifications).
@@ -60,6 +62,23 @@ export const SUBMIT_BOT_SPEC_TOOL: Anthropic.Tool = {
         },
       },
       payment_method: { type: "string", enum: ["manual", "telegram_invoice", "external_link"] },
+      faq: {
+        type: "array",
+        description: "Only when bot_type is \"chat\": the questions the bot answers.",
+        items: {
+          type: "object",
+          required: ["question", "answer"],
+          properties: {
+            question: { type: "string" },
+            answer: { type: "string" },
+            keywords: {
+              type: "array",
+              items: { type: "string" },
+              description: "Words a customer might type that should reach this answer.",
+            },
+          },
+        },
+      },
       payment_details: { type: "string" },
       admin_telegram_username: { type: "string" },
     },
@@ -79,12 +98,15 @@ You are given:
 2. A BotSpec JSON describing one user's bot.
 
 TASK: Produce ONLY the file edits needed to inject the user's content into the
-template's designated placeholder file(s) (typically a single \`config/bot.json\`).
+template's designated placeholder file(s) — the single JSON config file the
+template ships with (e.g. \`config/bot.json\` for a shop, \`config/faq.json\`
+for a FAQ bot). Match the existing file's exact shape; only its values change.
 
 STRICT RULES:
-- Do not modify any file outside the designated config/content area (never touch files under /api, /lib unless they are explicitly marked as a content file).
+- Do not modify any file outside the designated config/content area (never touch files under /api, /lib).
 - Do not change routing, payment-handling logic, or security checks.
-- Do not invent product data not present in BotSpec.
+- Do not invent content that is not present in BotSpec (no invented prices, products, questions or answers).
+- Keep keys the template already defines even if BotSpec says nothing about them.
 - Respond with a JSON object: { "files": [{ "path": string, "content": string }], "warnings": string[] }.
 - If BotSpec is missing data a placeholder needs, use a safe, clearly-labeled placeholder (e.g. "product name TBD") and add a note to "warnings" instead of inventing a price or other business-critical value.
 - Output JSON only, no prose, no markdown fences.`;

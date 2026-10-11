@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import { supabase } from "./supabase-client";
 import type { BotBuilderMessage, BotBuilderTurnResult, BotSpec } from "./bot-builder/types";
+import type { BotConfig } from "./bot-builder/config";
 
 async function getAuthToken(): Promise<string | null> {
   const {
@@ -322,5 +323,22 @@ export const api = {
     }>("/api/bot-builder/generate", {
       method: "POST",
       body: JSON.stringify({ spec }),
+    }),
+
+  // Bots this user already generated, and their live catalogue in config/bot.json.
+  botBuilderProjects: () =>
+    fetchJson<{ projects: { repo: string; title: string; createdAt: string }[] }>(
+      "/api/bot-builder/projects"
+    ),
+
+  botBuilderProject: (repo: string) =>
+    fetchJson<{ repo: string; config: BotConfig }>(
+      `/api/bot-builder/project?repo=${encodeURIComponent(repo)}`
+    ),
+
+  botBuilderSaveProject: (repo: string, config: BotConfig) =>
+    fetchJson<{ ok: boolean; commit: string }>("/api/bot-builder/project", {
+      method: "PUT",
+      body: JSON.stringify({ repo, config }),
     }),
 };

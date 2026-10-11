@@ -31,4 +31,29 @@ function answerCallbackQuery(callbackQueryId, text) {
   return call("answerCallbackQuery", { callback_query_id: callbackQueryId, text });
 }
 
-module.exports = { sendMessage, answerCallbackQuery };
+/**
+ * Sends a native Telegram payment invoice. Requires PAYMENT_PROVIDER_TOKEN
+ * (BotFather → your bot → Payments); without it Telegram rejects the call, so
+ * the caller is expected to have a fallback.
+ */
+function sendInvoice(chatId, { title, description, payload, currency, prices }) {
+  return call("sendInvoice", {
+    chat_id: chatId,
+    title,
+    description,
+    payload,
+    currency,
+    prices,
+  });
+}
+
+/** Telegram requires pre_checkout_query to be answered within 10 seconds. */
+function answerPreCheckoutQuery(preCheckoutQueryId, ok, errorMessage) {
+  return call("answerPreCheckoutQuery", {
+    pre_checkout_query_id: preCheckoutQueryId,
+    ok,
+    ...(errorMessage ? { error_message: errorMessage } : {}),
+  });
+}
+
+module.exports = { sendMessage, answerCallbackQuery, sendInvoice, answerPreCheckoutQuery };

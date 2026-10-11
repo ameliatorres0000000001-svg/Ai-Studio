@@ -188,3 +188,71 @@ export async function createRepoWithFiles(
 
   return { owner: repo.owner.login, repo: repo.name, html_url: repo.html_url };
 }
+
+/** Only paths that cannot escape the repo root are accepted for single-file reads/writes. */
+function assertSafePath(filePath: string): string {
+  const clean = filePath.trim();
+  if (!clean || clean.startsWith("/") || clean.includes("..") || clean.includes("\\")) {
+    throw new Error("Unsafe repository path");
+  }
+  return clean;
+}
+
+/** Resolves and authorizes an "owner/repo" pair for single-file operations. */
+function resolveAllowedRepo(owner: unknown, repo: unknown): { owner: string; repo: string } {
+  const parsed = parseRepoFullName(`${owner}/${repo}`);
+  if (!parsed) throw new Error("Invalid repository name");
+  if (!isRepoAllowed(`${parsed.owner}/${parsed.repo}`)) {
+    throw new Error("Repository is not in GITHUB_ALLOWED_REPOS");
+  }
+  return parsed;
+}
+
+/** Reads one file from a repo. Returns null when it does not exist. */
+export async function getRepoFile(
+  owner: string,
+  repo: string,
+  filePath: string
+): Promise<{ content: string; sha: string } | null> {
+  const r = resolveAllowedRepo(owner, repo);
+  const path = assertSafePath(filePath);
+  const octokit = getOctokit();
+  try {
+    const { data } = await octokit.rest.repos.getContent({ owner: r.owner, repo: r.repo, path });
+    if (Array.isArray(data) || data.type !== "file") return null;
+    return {
+      content: Buffer.from(data.content, "base64").toString("utf-8"),
+      sha: data.sha,
+    };
+  } catch (error: any) {
+    if (error?.status === 404) return null;
+    throw error;
+  }
+}
+
+/**
+ * Creates or updates one file. Pushing to a repo that Vercel builds from
+ * triggers a redeploy, which is how the Bot Builder's config edits take effect
+ * without the user touching git.
+ */
+export async function putRepoFile(
+  owner: string,
+  repo: string,
+  filePath: string,
+  content: string,
+  message: string
+): Promise<{ commit: string }> {
+  const r = resolveAllowedRepo(owner, repo);
+  const path = assertSafePath(filePath);
+  const octokit = getOctokit();
+  const existing = await getRepoFile(r.owner, r.repo, path);
+  const { data } = await octokit.rest.repos.createOrUpdateFileContents({
+    owner: r.owner,
+    repo: r.repo,
+    path,
+    message,
+    content: Buffer.from(content, "utf-8").toString("base64"),
+    ...(existing ? { sha: existing.sha } : {}),
+  });
+  return { commit: data.commit.sha || "" };
+}

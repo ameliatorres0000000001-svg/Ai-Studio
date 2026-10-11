@@ -45,22 +45,34 @@ export function readTemplate(templateName: string): { path: string; content: str
 
 const templateForBotType: Record<BotSpec["bot_type"], string> = {
   shop: "shop-bot",
-  chat: "shop-bot", // same skeleton, config.products left empty — extend with a dedicated template later
-  booking: "shop-bot",
+  chat: "faq-bot",
+  booking: "shop-bot", // still the shop skeleton — a dedicated template is a follow-up
   miniapp: "shop-bot",
 };
 
 /**
+ * The only files a generated bot's content may be written into, per template.
+ * Everything else in a template is code the user should not be editing blindly.
+ */
+const CONTENT_FILES: Record<string, Set<string>> = {
+  "shop-bot": new Set(["config/bot.json"]),
+  "faq-bot": new Set(["config/faq.json"]),
+};
+
+function contentFilesFor(templateName: string): Set<string> {
+  return CONTENT_FILES[templateName] || CONTENT_FILES["shop-bot"];
+}
+
+/**
  * Only this function is allowed to call a model on a template + spec, and it only
  * ever returns edits to the template's declared content files (see
- * CONTENT_FILES below) — never to the handler/payment/security code itself.
+ * CONTENT_FILES above) — never to the handler/payment/security code itself.
  */
-const CONTENT_FILES = new Set(["config/bot.json"]);
-
 export async function fillTemplate(model: ResolvedModel, spec: BotSpec): Promise<TemplateFillResult> {
   const templateName = templateForBotType[spec.bot_type] || "shop-bot";
+  const allowed = contentFilesFor(templateName);
   const allFiles = readTemplate(templateName);
-  const contentFiles = allFiles.filter((f) => CONTENT_FILES.has(f.path));
+  const contentFiles = allFiles.filter((f) => allowed.has(f.path));
 
   const result = await providerFor(model.route.format).send(
     [
@@ -79,7 +91,7 @@ export async function fillTemplate(model: ResolvedModel, spec: BotSpec): Promise
     throw new Error("Template filler returned non-JSON output");
   }
 
-  const files = (parsed.files || []).filter((f) => CONTENT_FILES.has(f.path));
+  const files = (parsed.files || []).filter((f) => allowed.has(f.path));
   return { files, warnings: parsed.warnings || [], usage: result.usage };
 }
 

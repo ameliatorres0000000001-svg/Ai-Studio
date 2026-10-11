@@ -886,3 +886,38 @@ a:has(> .dashboard-feature-card):hover .dashboard-feature-card { border-color: v
 .bot-builder-env:hover { border-color: var(--border-hover); }
 .bot-builder-env code { font-family: var(--font-mono); font-size: 11px; color: var(--text-0); }
 .bot-builder-env span { color: var(--text-3); font-size: 11px; }
+
+/* ── Generated-bot projects panel ── */
+.bot-projects-list { display: flex; flex-direction: column; gap: 6px; }
+.bot-project-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer;
+  background: var(--bg-0); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  padding: 9px 12px; color: var(--text-1); font-size: 12px; text-align: left;
+}
+.bot-project-row:hover { border-color: var(--border-hover); }
+.bot-project-row.on { border-color: var(--primary); background: var(--primary-dim); }
+.bot-project-row code { font-family: var(--font-mono); font-size: 12px; color: var(--text-0); }
+.bot-project-row span { color: var(--text-3); font-size: 11px; }
+.bot-config-form { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.bot-config-field { display: flex; flex-direction: column; gap: 5px; }
+.bot-config-field > span { color: var(--text-3); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+.bot-config-field input, .bot-config-field select {
+  background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; color: var(--text-0); font-size: 13px; font-family: inherit; width: 100%;
+}
+.bot-config-field select { font-family: var(--font-kh), var(--font-sans); }
+.bot-product-row { display: grid; grid-template-columns: 1.2fr 0.7fr 0.6fr 1.4fr auto; gap: 6px; align-items: center; }
+.bot-product-row input, .bot-product-row select {
+  background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 7px 9px; color: var(--text-0); font-size: 12px; font-family: inherit; width: 100%;
+}
+.bot-product-remove {
+  background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-3); cursor: pointer; padding: 6px 9px; font-size: 11px;
+}
+.bot-product-remove:hover { color: var(--error); border-color: var(--error); }
+.bot-config-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+@media (max-width: 640px) {
+  .bot-product-row { grid-template-columns: 1fr 1fr; }
+  .bot-product-row > input:nth-child(4) { grid-column: 1 / -1; }
+}

@@ -15,12 +15,21 @@ export interface BotProduct {
   description?: string;
 }
 
+export interface BotFaqEntry {
+  question: string;
+  answer: string;
+  /** Words a customer would type to reach this answer — lets the bot match free text. */
+  keywords?: string[];
+}
+
 export interface BotSpec {
   bot_type: BotType;
   bot_name: string;
   language: BotLanguage;
   description: string;
   products?: BotProduct[];
+  /** Used when bot_type is "chat": the questions the bot answers. */
+  faq?: BotFaqEntry[];
   payment_method: PaymentMethod;
   /** Free text: an ABA/Wing/Bakong payment link, or a note about the Telegram provider token. */
   payment_details?: string;

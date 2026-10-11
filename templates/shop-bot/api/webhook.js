@@ -6,7 +6,7 @@
 // prices, payment method) belong in /config/bot.json, not here.
 
 const crypto = require("crypto");
-const { sendMessage, answerCallbackQuery } = require("../lib/telegram");
+const { sendMessage, answerCallbackQuery, sendInvoice, answerPreCheckoutQuery } = require("../lib/telegram");
 const config = require("../config/bot.json");
 
 function t(km, en) {
@@ -17,6 +17,23 @@ function t(km, en) {
 
 function formatPrice(p) {
   return p.currency === "KHR" ? `${p.price.toLocaleString()} ៛` : `$${p.price}`;
+}
+
+/**
+ * Telegram charges in the currency's smallest unit: cents for USD, but KHR is
+ * a zero-decimal currency so whole riel is correct there.
+ */
+function toMinorUnits(price, currency) {
+  const n = Number(price) || 0;
+  return currency === "KHR" ? Math.round(n) : Math.round(n * 100);
+}
+
+/** Messages are sent with parse_mode HTML, so customer-typed text must be escaped. */
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function productListKeyboard() {
@@ -70,26 +87,61 @@ async function handleOrderDetails(chatId, from, idx, detailsText) {
   const p = config.products[idx];
   if (!p) return;
 
+  const name = escapeHtml(p.name);
+
   await sendMessage(
     chatId,
     t(
-      `✅ បានទទួលការកម្ម៉ង់របស់អ្នកសម្រាប់ <b>${p.name}</b> (${formatPrice(p)}).`,
-      `✅ Your order for <b>${p.name}</b> (${formatPrice(p)}) has been received.`
-    ) + "\n\n" + paymentInstructions()
+      `✅ បានទទួលការកម្ម៉ង់របស់អ្នកសម្រាប់ <b>${name}</b> (${formatPrice(p)}).`,
+      `✅ Your order for <b>${name}</b> (${formatPrice(p)}) has been received.`
+    )
   );
+
+  await sendPaymentStep(chatId, p, idx);
 
   const adminChatId = process.env.ADMIN_CHAT_ID;
   if (adminChatId) {
     const who = from.username ? `@${from.username}` : from.first_name || "customer";
     await sendMessage(
       adminChatId,
-      `🛎 <b>New order</b>\nProduct: ${p.name} (${formatPrice(p)})\nFrom: ${who}\nDetails: ${detailsText}`
+      `🛎 <b>New order</b>\nProduct: ${name} (${formatPrice(p)})\nFrom: ${escapeHtml(who)}\nDetails: ${escapeHtml(detailsText)}`
     );
   }
 }
 
-function paymentInstructions() {
+/**
+ * Sends a native Telegram invoice when the seller chose that method and
+ * PAYMENT_PROVIDER_TOKEN is configured. If the charge fails (most commonly
+ * because the provider does not support the shop's currency), fall back to the
+ * plain instruction text so the customer is never left without a way to pay.
+ */
+async function sendPaymentStep(chatId, p, idx) {
   const method = config.payment && config.payment.method;
+
+  if (method === "telegram_invoice" && process.env.PAYMENT_PROVIDER_TOKEN) {
+    try {
+      await sendInvoice(chatId, {
+        title: String(p.name).slice(0, 32),
+        description: String(p.description || config.botName || "Order").slice(0, 250),
+        payload: `order:${idx}:${chatId}:${Date.now()}`,
+        currency: p.currency === "KHR" ? "KHR" : "USD",
+        prices: [{ label: String(p.name).slice(0, 32), amount: toMinorUnits(p.price, p.currency) }],
+      });
+      return;
+    } catch (error) {
+      console.error("sendInvoice failed:", error && error.message);
+      // The invoice did not go out, so promising one would be a lie — fall back
+      // to the same wording a manual-payment shop uses.
+      await sendMessage(chatId, paymentInstructions("manual"));
+      return;
+    }
+  }
+
+  await sendMessage(chatId, paymentInstructions());
+}
+
+function paymentInstructions(overrideMethod) {
+  const method = overrideMethod || (config.payment && config.payment.method);
   if (method === "external_link" && config.payment.details) {
     return t(
       `សូមបង់ប្រាក់តាមតំណនេះ៖ ${config.payment.details}`,
@@ -105,6 +157,23 @@ function paymentInstructions() {
   return t(
     "អ្នកលក់នឹងទាក់ទងអ្នកផ្ទាល់ដើម្បីបញ្ជាក់ការបង់ប្រាក់។",
     "The seller will contact you directly to confirm payment."
+  );
+}
+
+/** Telegram sends this once a payment has actually gone through. */
+async function handleSuccessfulPayment(chatId, from, payment) {
+  await sendMessage(chatId, t("✅ បានបង់ប្រាក់រួចរាល់! សូមអរគុណ។", "✅ Payment received — thank you!"));
+
+  const adminChatId = process.env.ADMIN_CHAT_ID;
+  if (!adminChatId) return;
+
+  const amount = payment.currency === "KHR" ? `${Number(payment.total_amount).toLocaleString()} ៛` : `$${(payment.total_amount / 100).toFixed(2)}`;
+  const who = (from && from.username) ? `@${from.username}` : ((from && from.first_name) || "customer");
+  await sendMessage(
+    adminChatId,
+    `💰 <b>Payment received</b>\nAmount: ${amount}\n` +
+      `Ref: ${escapeHtml(payment.provider_payment_charge_id || payment.telegram_payment_charge_id || "-")}\n` +
+      `From: ${escapeHtml(who)}`
   );
 }
 
@@ -143,7 +212,11 @@ module.exports = async (req, res) => {
   try {
     const update = req.body;
 
-    if (update.callback_query) {
+    if (update.pre_checkout_query) {
+      // Telegram gives us only 10 seconds here. The order was already validated
+      // in the chat before the invoice was sent, so accept it.
+      await answerPreCheckoutQuery(update.pre_checkout_query.id, true);
+    } else if (update.callback_query) {
       const cb = update.callback_query;
       const chatId = cb.message.chat.id;
       await answerCallbackQuery(cb.id, "");
@@ -159,6 +232,8 @@ module.exports = async (req, res) => {
 
       if (text === "/start" || text === "/menu") {
         await handleStart(chatId);
+      } else if (msg.successful_payment) {
+        await handleSuccessfulPayment(chatId, msg.from, msg.successful_payment);
       } else if (msg.reply_to_message) {
         const idx = extractPendingOrderIndex(msg.reply_to_message.text);
         if (idx !== null) {

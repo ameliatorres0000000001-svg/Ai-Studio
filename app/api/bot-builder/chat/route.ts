@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
-import { isAdminEmail } from "@/lib/admin";
+import { canUseBotBuilder } from "@/lib/bot-builder/access";
 import { isClaudeConfigured } from "@/lib/claude";
 import { resolveBotBuilderModel, runBotBuilderTurn } from "@/lib/bot-builder/requirements-agent";
 import { checkEntitlement } from "@/lib/entitlements";
@@ -35,8 +35,8 @@ function isMessageArray(v: unknown): v is BotBuilderMessage[] {
 export async function POST(req: Request) {
   const { user, error: authError } = await getAuthenticatedUser(req);
   if (authError) return authError;
-  if (!isAdminEmail(user?.email)) {
-    return NextResponse.json({ error: "Bot Builder is admin-only for now" }, { status: 403 });
+  if (!canUseBotBuilder(user?.email)) {
+    return NextResponse.json({ error: "Bot Builder is not enabled for this account" }, { status: 403 });
   }
 
   if (!isClaudeConfigured()) {

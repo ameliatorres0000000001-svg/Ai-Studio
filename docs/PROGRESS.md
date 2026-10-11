@@ -112,6 +112,44 @@ Verify: typecheck ✅ · build ✅
 
 Verify: typecheck ✅ · build ✅
 
+## Done (Phase H — Bot Builder: edit loop, feature flag, FAQ bots, payments, 2026-10-11)
+
+- **Edit without redeploy-by-hand (admin panel).** New
+  `GET|PUT /api/bot-builder/project` reads and commits a bot's config straight
+  through the GitHub API, `GET /api/bot-builder/projects` lists the bots a user
+  generated (structured `detail` on the activity row, legacy titles still
+  parsed). `components/BotProjects.tsx` renders it under `/bot-builder` —
+  product add/remove/edit, payment method, admin username; saving pushes a
+  commit, which is what makes Vercel rebuild the bot.
+  `lib/bot-builder/config.ts` validates every save server-side (name, price
+  range, product cap, method/currency fallback).
+- **Feature flag (item 4).** `lib/bot-builder/access.ts`:
+  `FEATURE_BOT_BUILDER=true` opens the Builder to any allowed user; admins
+  always have it. Both routes now use it instead of hard admin-only.
+- **FAQ bots are real (item 2, first half).** New `templates/faq-bot/`
+  (question/answer config with `keywords` so customers can type instead of
+  tapping, contact button, escaping). `chat` bot_type now maps to it;
+  `CONTENT_FILES` is per-template so the model still cannot touch code.
+  `BotSpec.faq` + tool schema added.
+- **Real `telegram_invoice` (item 3).** `sendInvoice` / `answerPreCheckoutQuery`
+  wired with correct minor units (USD → cents, KHR stays whole), success
+  handler notifies the admin with amount + payment reference, and a failed
+  charge falls back to the manual wording instead of promising an invoice that
+  never sent.
+- **New test suite** `npm run test:bots` (42 checks): FAQ routing in Khmer and
+  English, escaping, secret-token gate, invoice amounts/currency, failure
+  fallback, payment confirmation, config validation.
+
+Verify: typecheck ✅ · build ✅ · test:bots 42/42 ✅
+
+## Still open
+- Website / Mini App / Web App Builder cards remain "Coming soon".
+- `booking` still uses the shop skeleton (needs its own template).
+- Auto-deploy to Vercel + auto `setWebhook`: deliberately NOT wired —
+  CLAUDE.md forbids deploy from here.
+- `FEATURE_BOT_BUILDER` is not yet in `.env.example` (that file is not read
+  from this environment) — add it manually.
+
 ## Next
 - Apply migrations in Supabase dashboard (SQL editor), set env vars
   (see Settings tab env list), create `receipts` bucket (private; auto-created
@@ -124,7 +162,7 @@ AI_GATEWAY_BASE_URL, AI_GATEWAY_OPENAI_BASE_URL, ANTHROPIC_API_KEY,
 GOOGLE_AI_BASE_URL, GOOGLE_AI_API_KEY, OPENROUTER_BASE_URL,
 OPENROUTER_API_KEY, BEDROCK_BASE_URL, BEDROCK_API_KEY, AI_MAX_TOKENS,
 ANTHROPIC_MAX_TOKENS, ADMIN_EMAILS, ALLOWED_USER_EMAILS,
-FEATURE_PAYMENTS, PAYMENTS_KHQR_IMAGE_URL, TELEGRAM_BOT_TOKEN,
+FEATURE_PAYMENTS, FEATURE_BOT_BUILDER, PAYMENTS_KHQR_IMAGE_URL, TELEGRAM_BOT_TOKEN,
 TELEGRAM_ALLOWED_USER_IDS, VERCEL_TOKEN, VERCEL_PROJECT_NAME,
 VERCEL_TEAM_ID, RAILWAY_TOKEN, GIT_COMMIT_NAME, GIT_COMMIT_EMAIL,
 WORKSPACE_ROOT, NODE_ENV, NEXT_PUBLIC_SUPABASE_URL,
@@ -133,4 +171,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
 ## How to test
 - `npm run typecheck && npm run build`
 - `npm run test:quota` (mocked gate: free 429 at limit, tier locks, admin bypass)
+- `npm run test:bots` (generated-bot templates: FAQ routing, escaping, invoice
+  amounts, payment fallback, config validation)
 - Manual: plans tab → KHQR pay → /admin approve → chat works on new tier.
+- Manual: `/dashboard` (public, demo mode) → a feature card → `/bot-builder`
+  (needs a session; admin or `FEATURE_BOT_BUILDER=true`) → describe a bot →
+  create → the repo link → edit products in "My bots".
+
+## Generated-bot env var NAMES (set on the BOT's Vercel project, not here)
+TELEGRAM_BOT_TOKEN, ADMIN_CHAT_ID, TELEGRAM_WEBHOOK_SECRET,
+PAYMENT_PROVIDER_TOKEN

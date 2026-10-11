@@ -19,6 +19,7 @@ In the Vercel project settings, add:
 | `TELEGRAM_BOT_TOKEN` | From `@BotFather` → `/newbot` (or `/token` for an existing bot) |
 | `ADMIN_CHAT_ID` | See below |
 | `TELEGRAM_WEBHOOK_SECRET` | Recommended. Any long random string you invent (e.g. 32 random letters) — you paste the same value into `setWebhook` in step 3. Without it, anyone who guesses your webhook URL can send fake orders to your admin chat. |
+| `PAYMENT_PROVIDER_TOKEN` | Only if you set `payment.method` to `"telegram_invoice"`. From `@BotFather` → your bot → **Payments**. Without it the bot falls back to telling customers the seller will contact them. |
 
 ### Finding your admin chat id
 
@@ -63,7 +64,10 @@ Set `payment.method` in `config/bot.json` to one of:
 - `"manual"` — the bot tells customers the seller will contact them to confirm payment.
 - `"external_link"` — set `payment.details` to an ABA PayWay / Wing / Bakong KHQR
   link; the bot sends it to customers after they order.
-- `"telegram_invoice"` — requires a payment provider token from
-  `@BotFather` → your bot → **Payments**. This template tells customers an
-  invoice is coming; wiring up `sendInvoice` is a follow-up step, since
-  provider coverage for KHR/local gateways varies.
+- `"telegram_invoice"` — the bot sends a real Telegram payment invoice
+  (`sendInvoice`), confirms to the customer once paid, and notifies the admin
+  with the amount and payment reference. Needs `PAYMENT_PROVIDER_TOKEN`, and
+  the currency has to be one your payment provider supports — most providers
+  do not cover KHR, so Cambodian sellers usually pair this with a KHQR link
+  via `"external_link"` instead. If the charge fails, the bot falls back to
+  the "seller will contact you" message rather than leaving the customer stuck.

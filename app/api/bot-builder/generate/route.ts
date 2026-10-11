@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
-import { isAdminEmail } from "@/lib/admin";
+import { canUseBotBuilder } from "@/lib/bot-builder/access";
 import { isClaudeConfigured } from "@/lib/claude";
 import { isGitHubConfigured, createRepoWithFiles } from "@/lib/github";
 import { resolveBotBuilderModel } from "@/lib/bot-builder/requirements-agent";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 const templateForBotType: Record<string, string> = {
   shop: "shop-bot",
-  chat: "shop-bot",
+  chat: "faq-bot",
   booking: "shop-bot",
   miniapp: "shop-bot",
 };
@@ -29,8 +29,8 @@ const templateForBotType: Record<string, string> = {
 export async function POST(req: Request) {
   const { user, error: authError } = await getAuthenticatedUser(req);
   if (authError) return authError;
-  if (!isAdminEmail(user?.email)) {
-    return NextResponse.json({ error: "Bot Builder is admin-only for now" }, { status: 403 });
+  if (!canUseBotBuilder(user?.email)) {
+    return NextResponse.json({ error: "Bot Builder is not enabled for this account" }, { status: 403 });
   }
   const userId = user!.id;
 
@@ -78,7 +78,14 @@ export async function POST(req: Request) {
       type: "bot_builder",
       action: "bot_generated",
       title: `Generated bot "${spec.bot_name}" → ${repo.owner}/${repo.repo}`,
-      detail: warnings.length ? `Warnings: ${warnings.join("; ")}` : null,
+      // Structured so the projects panel can list generated bots without
+      // re-parsing a human-readable title.
+      detail: JSON.stringify({
+        repo: `${repo.owner}/${repo.repo}`,
+        bot_name: spec.bot_name,
+        bot_type: spec.bot_type,
+        warnings: warnings.length ? warnings : undefined,
+      }),
       status: "success",
     });
 
