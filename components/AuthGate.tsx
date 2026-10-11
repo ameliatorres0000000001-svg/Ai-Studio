@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase-client";
 import { useLang } from "@/lib/i18n";
@@ -32,10 +33,16 @@ interface TelegramLoginConfig {
 /**
  * Blocks the app until a Supabase session exists. The API routes require the
  * session's access token as a Bearer token, so nothing works without sign-in.
+ * PUBLIC_PATHS render without a session (demo mode with sample data only);
+ * every API route still checks auth itself, so this is UI convenience only.
  */
+const PUBLIC_PATHS = ["/dashboard"];
+
 export function AuthGate({ children }: { children: ReactNode }) {
   const { lang, toggle } = useLang();
   const kh = lang === "kh";
+  const pathname = usePathname();
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname === p || pathname?.startsWith(`${p}/`));
   const [started, setStarted] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
@@ -163,6 +170,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setBusy(false);
     }
   }
+
+  if (isPublicPath) return <>{children}</>;
 
   if (!ready) return null;
   if (!isSupabaseConfigured) {

@@ -75,6 +75,26 @@ Verify: typecheck ✅ · build ✅
 
 Verify: typecheck ✅ · build ✅
 
+## Done (Phase F — Bot Builder, 2026-10-11)
+
+- NEW: `lib/bot-builder/` (prompts, requirements-agent, template-filler,
+  types), `templates/shop-bot/` (webhook/api template), `app/api/bot-builder/`
+  (chat + generate routes), `app/bot-builder/page.tsx`,
+  `components/BotBuilderChat.tsx`, `app/dashboard/page.tsx`,
+  `components/PublicDashboard.tsx` (renamed — repo already had `DashboardView`).
+- Adapted to repo conventions: gateway models via `resolveBotBuilderModel`
+  (first code-purpose model on an anthropic-format route), `checkEntitlement`
+  quota + `logUsage` on both routes, login + admin gate on both routes,
+  `sanitizeError`-safe errors; BotBuilderChat reuses `.chat-msg` styles.
+- Merged (kept repo versions): `lib/github.ts` += slugifyRepoName +
+  createRepoWithFiles (private repo, collision check); `lib/api.ts` +=
+  botBuilderChat/botBuilderGenerate; `AuthGate.tsx` += PUBLIC_PATHS
+  (["/dashboard"], demo mode); `globals.css` += dashboard styles + bot thread.
+  Models/quotas/plans/CSP/ModelIcon/picker untouched (CSP already allows
+  telegram.org; BotBuilderChat has no external scripts).
+
+Verify: typecheck ✅ · build ✅
+
 ## Next
 - Apply migrations in Supabase dashboard (SQL editor), set env vars
   (see Settings tab env list), create `receipts` bucket (private; auto-created

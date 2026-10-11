@@ -1,0 +1,18 @@
+{
+  "botName": "My Shop Bot",
+  "language": "km",
+  "description": "A simple Telegram shop bot.",
+  "products": [
+    {
+      "name": "Sample product",
+      "price": 5,
+      "currency": "USD",
+      "description": "Replace this with a real product in the admin panel or by editing this file."
+    }
+  ],
+  "payment": {
+    "method": "manual",
+    "details": ""
+  },
+  "adminTelegramUsername": ""
+}

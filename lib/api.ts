@@ -14,6 +14,7 @@ import type {
   ChatModelInfo,
 } from "./types";
 import { supabase } from "./supabase-client";
+import type { BotBuilderMessage, BotBuilderTurnResult, BotSpec } from "./bot-builder/types";
 
 async function getAuthToken(): Promise<string | null> {
   const {
@@ -302,4 +303,23 @@ export const api = {
     fetchJson<{ activities: Activity[] }>(
       `/api/activities${workspaceId ? `?workspaceId=${workspaceId}` : ""}`
     ),
+
+  // No-code Bot Builder: a guided chat that produces a BotSpec, then a repo.
+  botBuilderChat: (history: BotBuilderMessage[], message: string) =>
+    fetchJson<BotBuilderTurnResult>("/api/bot-builder/chat", {
+      method: "POST",
+      body: JSON.stringify({ history, message }),
+    }),
+
+  botBuilderGenerate: (spec: BotSpec) =>
+    fetchJson<{
+      repoUrl: string;
+      owner: string;
+      repo: string;
+      warnings: string[];
+      nextSteps: string[];
+    }>("/api/bot-builder/generate", {
+      method: "POST",
+      body: JSON.stringify({ spec }),
+    }),
 };
