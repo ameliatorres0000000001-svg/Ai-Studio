@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getRepoInfo, getCloneUrl, isGitHubConfigured } from "@/lib/github";
-import { cloneRepo, pullLatest, getWorkspacePath } from "@/lib/workspace";
+import { getRepoInfo, getCloneUrl, isGitHubConfigured, isRepoAllowed, parseRepoFullName } from "@/lib/github";
+import { cloneRepo, pullLatest, getWorkspacePath, isWorkingTreeClean } from "@/lib/workspace";
 import { getAuthenticatedUser, supabaseAdmin, getOwnedWorkspace, toPublicWorkspace } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activities";
 import fs from "fs";
@@ -32,20 +32,33 @@ export async function POST(req: Request) {
       );
     }
 
-    const [owner, repo] = repoFullName.split("/");
-    if (!owner || !repo) {
+    const parsed = parseRepoFullName(repoFullName);
+    if (!parsed) {
       return NextResponse.json(
         { error: "Invalid repository name. Expected owner/repo format." },
         { status: 400 }
       );
     }
+    if (!isRepoAllowed(`${parsed.owner}/${parsed.repo}`)) {
+      return NextResponse.json(
+        { error: "Repository is not allowed" },
+        { status: 403 }
+      );
+    }
 
-    const repoInfo = await getRepoInfo(owner, repo);
+    const repoInfo = await getRepoInfo(parsed.owner, parsed.repo);
+    const canonicalFullName = repoInfo.full_name;
+    if (!isRepoAllowed(canonicalFullName)) {
+      return NextResponse.json(
+        { error: "Repository is not allowed" },
+        { status: 403 }
+      );
+    }
 
     const { data: existing } = await supabaseAdmin
       .from("workspaces")
       .select("*")
-      .eq("repo_full_name", repoFullName)
+      .eq("repo_full_name", canonicalFullName)
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -56,17 +69,19 @@ export async function POST(req: Request) {
       workspaceId = existing.id;
       localPath = getWorkspacePath(workspaceId);
       if (fs.existsSync(localPath)) {
+        if (!(await isWorkingTreeClean(localPath))) {
+          return NextResponse.json(
+            { error: "Workspace has uncommitted changes; commit or roll back before syncing" },
+            { status: 409 }
+          );
+        }
         await supabaseAdmin
           .from("workspaces")
           .update({ status: "syncing", updated_at: new Date().toISOString() })
           .eq("id", workspaceId);
-        try {
-          await pullLatest(localPath, getCloneUrl(owner, repo));
-        } catch {
-          await cloneRepo(workspaceId, getCloneUrl(owner, repo), repoInfo.default_branch);
-        }
+        await pullLatest(localPath, getCloneUrl(parsed.owner, parsed.repo));
       } else {
-        await cloneRepo(workspaceId, getCloneUrl(owner, repo), repoInfo.default_branch);
+        await cloneRepo(workspaceId, getCloneUrl(parsed.owner, parsed.repo), repoInfo.default_branch);
       }
       await supabaseAdmin
         .from("workspaces")
@@ -76,13 +91,13 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", workspaceId);
-      await logActivity({ userId, workspaceId, type: "sync", title: `Synced ${repoFullName}`, status: "success" });
+      await logActivity({ userId, workspaceId, type: "sync", title: `Synced ${canonicalFullName}`, status: "success" });
     } else {
       const { data: newWs, error } = await supabaseAdmin
         .from("workspaces")
         .insert({
           user_id: userId,
-          repo_full_name: repoFullName,
+          repo_full_name: canonicalFullName,
           repo_default_branch: repoInfo.default_branch,
           local_path: "",
           status: "syncing",
@@ -94,7 +109,7 @@ export async function POST(req: Request) {
       workspaceId = newWs.id;
       localPath = await cloneRepo(
         workspaceId,
-        getCloneUrl(owner, repo),
+        getCloneUrl(parsed.owner, parsed.repo),
         repoInfo.default_branch
       );
 
@@ -107,7 +122,7 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", workspaceId);
-      await logActivity({ userId, workspaceId, type: "clone", title: `Cloned ${repoFullName}`, status: "success" });
+      await logActivity({ userId, workspaceId, type: "clone", title: `Cloned ${canonicalFullName}`, status: "success" });
     }
 
     const { data: ws } = await supabaseAdmin

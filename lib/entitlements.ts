@@ -1,5 +1,6 @@
 import modelsJson from "@/config/models.json";
 import type { ModelsConfig, Tier } from "./ai/types";
+import { isAdminEmail } from "./admin";
 
 // SERVER-ONLY (except evaluateEntitlement, which is pure and unit-tested by
 // scripts/test-quota.mjs). Decides whether a user may call a model: plan tier,
@@ -30,20 +31,12 @@ export interface EntitlementResult {
   plan: string;
   messageKh: string;
   messageEn: string;
+  unlimited: boolean;
 }
 
 function modelTier(modelId: string): Tier | null {
   const config = modelsJson as unknown as ModelsConfig;
   return config.models.find((m) => m.id === modelId)?.tier ?? null;
-}
-
-function isAdminEmail(email: string | undefined): boolean {
-  if (!email) return false;
-  const admins = (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return admins.includes(email.toLowerCase());
 }
 
 /** Pure decision function: no I/O, safe to test with mocked inputs. */
@@ -61,9 +54,10 @@ export function evaluateEntitlement(input: {
       tier,
       dailyLimit: -1,
       usedToday,
-      plan: plan.id,
+      plan: "admin",
       messageKh: "",
       messageEn: "",
+      unlimited: true,
     };
   }
 
@@ -77,6 +71,7 @@ export function evaluateEntitlement(input: {
       plan: plan.id,
       messageKh: "ម៉ូដែលនេះមិនស្គាល់ទេ។",
       messageEn: "Unknown model.",
+      unlimited: false,
     };
   }
 
@@ -90,6 +85,7 @@ export function evaluateEntitlement(input: {
       plan: plan.id,
       messageKh: `សូមអភ័យទោស! ម៉ូដែលនេះសម្រាប់តែគម្រោង ${tier.toUpperCase()} ប៉ុណ្ណោះ។ សូម Upgrade គម្រោងរបស់អ្នកដើម្បីប្រើវា។`,
       messageEn: `Sorry! This model is for ${tier.toUpperCase()} plans only. Please upgrade your plan to use it.`,
+      unlimited: false,
     };
   }
 
@@ -103,6 +99,7 @@ export function evaluateEntitlement(input: {
       plan: plan.id,
       messageKh: "សូមអភ័យទោស! អ្នកបានប្រើអស់កម្រិតថ្ងៃនេះហើយ។ សូមរង់ចាំថ្ងៃស្អែក ឬ Upgrade ដើម្បីបន្ត។",
       messageEn: "Sorry! You've reached today's limit. Please wait until tomorrow or upgrade to continue.",
+      unlimited: false,
     };
   }
 
@@ -114,6 +111,7 @@ export function evaluateEntitlement(input: {
     plan: plan.id,
     messageKh: "",
     messageEn: "",
+    unlimited: false,
   };
 }
 

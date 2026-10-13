@@ -18,6 +18,7 @@ interface Health {
 interface Usage {
   plan: string;
   dailyLimit: number;
+  unlimited?: boolean;
   today: { requests: number; inputTokens: number; outputTokens: number };
 }
 
@@ -84,11 +85,11 @@ export function DashboardView({
           {usage ? (
             <div>
               <small style={{ color: "var(--text-2)" }}>
-                {t("usedToday")}: {usage.today.requests}/{usage.dailyLimit} {t("requestsLabel")}
+                {usage.unlimited ? (lang === "kh" ? "ការប្រើប្រាស់គ្មានកំណត់" : "Unlimited usage") : `${t("usedToday")}: ${usage.today.requests}/${usage.dailyLimit} ${t("requestsLabel")}`}
               </small>
-              <div className="usage-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+              {!usage.unlimited && <div className="usage-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
                 <i style={{ width: `${pct}%` }} />
-              </div>
+              </div>}
               <p style={{ marginTop: 8 }}>
                 {usage.today.inputTokens} in · {usage.today.outputTokens} out
               </p>

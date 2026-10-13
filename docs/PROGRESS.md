@@ -181,3 +181,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
 ## Generated-bot env var NAMES (set on the BOT's Vercel project, not here)
 TELEGRAM_BOT_TOKEN, ADMIN_CHAT_ID, TELEGRAM_WEBHOOK_SECRET,
 PAYMENT_PROVIDER_TOKEN
+
+## Done (Agent Builder dashboard redesign, 2026-10-13)
+- Redesigned the public Agent Builder dashboard with bilingual hero, templates, status, projects, and next steps.
+- Files changed: components/PublicDashboard.tsx, app/globals.css.
+- Next step: run npm run typecheck and manually verify /dashboard in Khmer/English and mobile.
+
+## Done (Claude-style workspace studio, 2026-10-13)
+- Added /workspace route with Claude-style sidebar, sessions, workbench, floating composer, and a GitHub import modal (repo list + owner/repo or URL) backed by the existing sync flow; sync route now validates repo names and enforces GITHUB_ALLOWED_REPOS.
+- Admins (ADMIN_EMAILS) now report unlimited usage via /api/usage; entitlements share lib/admin.ts isAdminEmail.
+- Files changed: app/workspace/page.tsx, components/WorkspaceStudio.tsx, components/GitHubImportModal.tsx, app/api/workspace/sync/route.ts, app/api/usage/route.ts, lib/entitlements.ts, lib/api.ts, app/globals.css, docs/PROGRESS.md.
+- Next step: manually verify /workspace import flow and admin/unlimited usage display.
+- Done: completed workspace studio implementation and validation pass.
+- Files changed: workspace route/studio/importer, sync/usage/entitlement APIs, styling, client API, and progress docs.
+- Next step: manually verify /workspace import flow and admin/unlimited usage display in a configured environment.

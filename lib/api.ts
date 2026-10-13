@@ -194,6 +194,8 @@ export const api = {
     fetchJson<{
       plan: string;
       dailyLimit: number;
+      unlimited: boolean;
+      isAdmin: boolean;
       today: { requests: number; inputTokens: number; outputTokens: number };
       days: { date: string; requests: number; inputTokens: number; outputTokens: number }[];
     }>("/api/usage"),

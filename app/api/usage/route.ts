@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser, supabaseAdmin } from "@/lib/supabase-server";
 import { getUserPlan } from "@/lib/entitlements";
+import { isAdminEmail } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -49,10 +50,13 @@ export async function GET(req: Request) {
 
   const today = days[days.length - 1];
   const plan = await getUserPlan(userId);
+  const unlimited = isAdminEmail(user!.email);
 
   return NextResponse.json({
-    plan: plan.id,
-    dailyLimit: plan.dailyLimit,
+    plan: unlimited ? "admin" : plan.id,
+    dailyLimit: unlimited ? -1 : plan.dailyLimit,
+    unlimited,
+    isAdmin: unlimited,
     today: { requests: today.requests, inputTokens: today.inputTokens, outputTokens: today.outputTokens },
     days,
   });
