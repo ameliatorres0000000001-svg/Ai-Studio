@@ -41,11 +41,13 @@ export default function Home() {
   const [openTabs, setOpenTabs] = useState<{ path: string; content: string }[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [githubStatus, setGithubStatus] = useState<{ configured: boolean; username?: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [bottomOpen, setBottomOpen] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     api.githubStatus().then(setGithubStatus).catch(() => {});
+    api.adminMe().then(({ isAdmin }) => setIsAdmin(isAdmin)).catch(() => setIsAdmin(false));
     api.listWorkspaces().then(({ workspaces }) => setWorkspaces(workspaces)).catch(() => {});
   }, []);
 
@@ -132,12 +134,15 @@ export default function Home() {
           ))}
         </nav>
 
-        <div className="sidebar-divider" />
-
-        <div className="sidebar-section-label">{t("connected")}</div>
-        <div className="sidebar-connections">
-          <ConnectionStatus />
-        </div>
+        {isAdmin && (
+          <>
+            <div className="sidebar-divider" />
+            <div className="sidebar-section-label">{lang === "kh" ? "ការតភ្ជាប់" : "Connections"}</div>
+            <div className="sidebar-connections">
+              <ConnectionStatus />
+            </div>
+          </>
+        )}
 
         {workspace && (
           <>
