@@ -22,13 +22,22 @@ export async function GET(req: Request) {
   const { workspace, error: wsError } = await getOwnedWorkspace(workspaceId, user!.id);
   if (wsError) return wsError;
 
+  const workspaceRoot = process.env.WORKSPACE_ROOT?.trim();
+  const workspacePath = workspace.local_path?.trim();
+  if (!workspaceRoot || !workspacePath) {
+    return NextResponse.json(
+      { error: "Workspace path is empty" },
+      { status: 400 }
+    );
+  }
+
   try {
     if (filePath) {
-      const content = readFileContent(workspace.local_path, filePath);
+      const content = readFileContent(workspacePath, filePath);
       return NextResponse.json({ path: filePath, content });
     }
 
-    const tree = readFileTree(workspace.local_path);
+    const tree = readFileTree(workspacePath);
     return NextResponse.json({ tree });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
