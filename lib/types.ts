@@ -16,13 +16,18 @@ export interface GitHubRepo {
   language: string | null;
 }
 
-export interface GitHubConnection {
-  id: string;
-  user_id: string;
-  username: string;
-  avatar_url: string | null;
-  connected_at: string;
-  last_synced_at: string | null;
+export interface GitHubBranch {
+  name: string;
+  protected: boolean;
+}
+
+export interface GitHubStatus {
+  connected: boolean;
+  login: string | null;
+  avatarUrl: string | null;
+  scopes: string | null;
+  oauthConfigured: boolean;
+  adminFallback: boolean;
 }
 
 export interface Workspace {

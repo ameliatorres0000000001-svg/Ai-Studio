@@ -11,8 +11,8 @@ import { getWorkspacePath, workspaceExists, redactSecrets } from "./workspace";
 export function resolveLocalPath(
   workspace: Workspace
 ): { localPath: string; error: NextResponse | null } {
-  const localPath = getWorkspacePath(workspace.id);
-  if (!workspaceExists(workspace.id)) {
+  const localPath = getWorkspacePath(workspace.id, workspace.user_id);
+  if (!workspaceExists(workspace.id, workspace.user_id)) {
     return {
       localPath,
       error: NextResponse.json(

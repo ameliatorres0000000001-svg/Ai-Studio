@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listRepositories, isGitHubConfigured } from "@/lib/github";
+import { listRepositories, isGitHubConnected, GitHubNotConnectedError } from "@/lib/github";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -8,24 +8,17 @@ export async function GET(req: Request) {
   const { user, error: authError } = await getAuthenticatedUser(req);
   if (authError) return authError;
 
-  if (!isGitHubConfigured()) {
-    return NextResponse.json(
-      {
-        error: "Not connected — Configure in Settings",
-        setupRequired: true,
-        envVars: ["GITHUB_ACCESS_TOKEN"],
-      },
-      { status: 400 }
-    );
+  if (!(await isGitHubConnected(user!.id, user!.email))) {
+    return NextResponse.json({ error: "GitHub account is not connected", connectRequired: true }, { status: 400 });
   }
 
   try {
-    const repos = await listRepositories();
+    const repos = await listRepositories(user!.id, user!.email);
     return NextResponse.json({ repos });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    if (error instanceof GitHubNotConnectedError) {
+      return NextResponse.json({ error: error.message, connectRequired: true }, { status: 400 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

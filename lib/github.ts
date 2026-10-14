@@ -1,16 +1,54 @@
 import { Octokit } from "@octokit/rest";
 import type { GitHubRepo } from "./types";
+import { decryptSecret } from "./crypto";
+import { supabaseAdmin } from "./supabase-server";
+import { isAdminEmail } from "./admin";
 
-// SERVER-ONLY. The token is read from the environment and never sent to the browser.
+// SERVER-ONLY. Per-user GitHub OAuth tokens; the plaintext token is decrypted
+// only in memory and never leaves the server. GITHUB_ACCESS_TOKEN remains as
+// an admin-only fallback.
 
-function getOctokit(): Octokit {
-  const token = process.env.GITHUB_ACCESS_TOKEN;
-  if (!token) {
-    throw new Error("GITHUB_ACCESS_TOKEN is not configured");
+export class GitHubNotConnectedError extends Error {
+  connectRequired = true;
+  constructor() {
+    super("GitHub account is not connected");
+    this.name = "GitHubNotConnectedError";
   }
-  return new Octokit({ auth: token });
 }
 
+/** Resolves the GitHub token for a user: their OAuth connection, else the env PAT when they are an admin. */
+export async function getGitHubTokenForUser(userId: string, userEmail?: string): Promise<string> {
+  const { data: conn } = await supabaseAdmin
+    .from("github_connections")
+    .select("token_enc")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (conn?.token_enc) return decryptSecret(conn.token_enc);
+  if (isAdminEmail(userEmail) && process.env.GITHUB_ACCESS_TOKEN) {
+    return process.env.GITHUB_ACCESS_TOKEN;
+  }
+  throw new GitHubNotConnectedError();
+}
+
+export async function getOctokit(userId: string, userEmail?: string): Promise<Octokit> {
+  return new Octokit({ auth: await getGitHubTokenForUser(userId, userEmail) });
+}
+
+/** True when a per-user connection exists (or the admin env fallback applies). */
+export async function isGitHubConnected(userId: string, userEmail?: string): Promise<boolean> {
+  try {
+    await getGitHubTokenForUser(userId, userEmail);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function isGitHubOAuthConfigured(): boolean {
+  return !!(process.env.GITHUB_OAUTH_CLIENT_ID && process.env.GITHUB_OAUTH_CLIENT_SECRET);
+}
+
+/** Env-token configured (admin fallback path). */
 export function isGitHubConfigured(): boolean {
   return !!process.env.GITHUB_ACCESS_TOKEN;
 }
@@ -40,21 +78,21 @@ export function isRepoAllowed(fullName: string): boolean {
   return list.some((p) => p === lower || p === `${owner}/*`);
 }
 
-export async function getAuthenticatedUser(): Promise<{
+export async function getAuthenticatedUser(userId: string, userEmail?: string): Promise<{
   login: string;
   avatar_url: string;
 }> {
-  const octokit = getOctokit();
+  const octokit = await getOctokit(userId, userEmail);
   const { data } = await octokit.rest.users.getAuthenticated();
   return { login: data.login, avatar_url: data.avatar_url };
 }
 
-export async function listRepositories(): Promise<GitHubRepo[]> {
-  const octokit = getOctokit();
+export async function listRepositories(userId: string, userEmail?: string): Promise<GitHubRepo[]> {
+  const octokit = await getOctokit(userId, userEmail);
   const data = await octokit.paginate(octokit.rest.repos.listForAuthenticatedUser, {
     sort: "updated",
     per_page: 100,
-    type: "owner",
+    type: "all",
   });
   return data
     .filter((r) => isRepoAllowed(r.full_name))
@@ -72,6 +110,8 @@ export async function listRepositories(): Promise<GitHubRepo[]> {
 }
 
 export async function getRepoInfo(
+  userId: string,
+  userEmail: string | undefined,
   owner: string,
   repo: string
 ): Promise<{
@@ -84,7 +124,7 @@ export async function getRepoInfo(
   html_url: string;
   can_push: boolean;
 }> {
-  const octokit = getOctokit();
+  const octokit = await getOctokit(userId, userEmail);
   const { data } = await octokit.rest.repos.get({ owner, repo });
   return {
     default_branch: data.default_branch,
@@ -102,10 +142,15 @@ export async function getRepoInfo(
  * Credentialed clone/push URL. Use only for a single git operation and never
  * log it, store it, or return it. Errors must pass through redactSecrets().
  */
-export function getCloneUrl(owner: string, repo: string): string {
-  const token = process.env.GITHUB_ACCESS_TOKEN;
-  if (!token) throw new Error("GITHUB_ACCESS_TOKEN is not configured");
+export async function getCloneUrl(userId: string, userEmail: string | undefined, owner: string, repo: string): Promise<string> {
+  const token = await getGitHubTokenForUser(userId, userEmail);
   return `https://x-access-token:${encodeURIComponent(token)}@github.com/${owner}/${repo}.git`;
+}
+
+export async function listBranches(userId: string, userEmail: string | undefined, owner: string, repo: string): Promise<{ name: string; protected: boolean }[]> {
+  const octokit = await getOctokit(userId, userEmail);
+  const data = await octokit.paginate(octokit.rest.repos.listBranches, { owner, repo, per_page: 100 });
+  return data.map((b) => ({ name: b.name, protected: !!b.protected }));
 }
 
 const REPO_NAME_RE = /^[A-Za-z0-9._-]{1,100}$/;
@@ -127,11 +172,13 @@ export function slugifyRepoName(input: string): string {
  * project (template + BotSpec content) to the user as their own repo.
  */
 export async function createRepoWithFiles(
+  userId: string,
+  userEmail: string | undefined,
   repoNameHint: string,
   files: { path: string; content: string }[]
 ): Promise<{ owner: string; repo: string; html_url: string }> {
-  const octokit = getOctokit();
-  const user = await getAuthenticatedUser();
+  const octokit = await getOctokit(userId, userEmail);
+  const user = await getAuthenticatedUser(userId, userEmail);
 
   let name = slugifyRepoName(repoNameHint);
   if (!REPO_NAME_RE.test(name)) name = "my-bot";
@@ -210,13 +257,15 @@ function resolveAllowedRepo(owner: unknown, repo: unknown): { owner: string; rep
 
 /** Reads one file from a repo. Returns null when it does not exist. */
 export async function getRepoFile(
+  userId: string,
+  userEmail: string | undefined,
   owner: string,
   repo: string,
   filePath: string
 ): Promise<{ content: string; sha: string } | null> {
   const r = resolveAllowedRepo(owner, repo);
   const path = assertSafePath(filePath);
-  const octokit = getOctokit();
+  const octokit = await getOctokit(userId, userEmail);
   try {
     const { data } = await octokit.rest.repos.getContent({ owner: r.owner, repo: r.repo, path });
     if (Array.isArray(data) || data.type !== "file") return null;
@@ -236,6 +285,8 @@ export async function getRepoFile(
  * without the user touching git.
  */
 export async function putRepoFile(
+  userId: string,
+  userEmail: string | undefined,
   owner: string,
   repo: string,
   filePath: string,
@@ -244,8 +295,8 @@ export async function putRepoFile(
 ): Promise<{ commit: string }> {
   const r = resolveAllowedRepo(owner, repo);
   const path = assertSafePath(filePath);
-  const octokit = getOctokit();
-  const existing = await getRepoFile(r.owner, r.repo, path);
+  const octokit = await getOctokit(userId, userEmail);
+  const existing = await getRepoFile(userId, userEmail, r.owner, r.repo, path);
   const { data } = await octokit.rest.repos.createOrUpdateFileContents({
     owner: r.owner,
     repo: r.repo,

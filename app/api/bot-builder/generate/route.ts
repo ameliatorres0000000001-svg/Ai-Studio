@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
 import { canUseBotBuilder } from "@/lib/bot-builder/access";
 import { isClaudeConfigured } from "@/lib/claude";
-import { isGitHubConfigured, createRepoWithFiles } from "@/lib/github";
+import { isGitHubConnected, createRepoWithFiles } from "@/lib/github";
 import { resolveBotBuilderModel } from "@/lib/bot-builder/requirements-agent";
 import { fillTemplate, mergeTemplateWithFill } from "@/lib/bot-builder/template-filler";
 import { isBotSpec } from "@/lib/bot-builder/types";
@@ -40,9 +40,9 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  if (!isGitHubConfigured()) {
+  if (!(await isGitHubConnected(userId, user!.email))) {
     return NextResponse.json(
-      { error: "GitHub not configured", setupRequired: true, envVars: ["GITHUB_ACCESS_TOKEN"] },
+      { error: "GitHub account is not connected", connectRequired: true },
       { status: 400 }
     );
   }
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     const templateName = templateForBotType[spec.bot_type] || "shop-bot";
     const allFiles = mergeTemplateWithFill(templateName, filledFiles);
 
-    const repo = await createRepoWithFiles(spec.bot_name, allFiles);
+    const repo = await createRepoWithFiles(userId, user!.email, spec.bot_name, allFiles);
 
     await logActivity({
       userId,

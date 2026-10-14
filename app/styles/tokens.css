@@ -1,0 +1,29 @@
+:root {
+  --tn-bg: #0d0f14;
+  --tn-surface: #161a23;
+  --tn-surface-raised: #1a1f2b;
+  --tn-surface-hover: #202636;
+  --tn-border: #292e3d;
+  --tn-text: #c0caf5;
+  --tn-text-muted: #7982a9;
+  --tn-text-subtle: #565f89;
+  --tn-blue: #7aa2f7;
+  --tn-cyan: #7dcfff;
+  --tn-green: #9ece6a;
+  --tn-yellow: #e0af68;
+  --tn-red: #f7768e;
+  --tn-purple: #bb9af7;
+  --tn-radius-sm: 6px;
+  --tn-radius-md: 8px;
+  --tn-radius-lg: 12px;
+  --tn-font-sans: var(--font-inter), Inter, system-ui, sans-serif;
+  --tn-font-kh: var(--font-khmer), "Noto Sans Khmer", sans-serif;
+  --tn-font-mono: var(--font-mono-loaded), "JetBrains Mono", monospace;
+  --bg-0: var(--tn-bg); --bg-1: var(--tn-surface); --bg-2: var(--tn-surface-raised); --bg-3: var(--tn-surface-hover);
+  --surface: var(--tn-surface); --surface-hover: var(--tn-surface-hover); --border: var(--tn-border); --border-subtle: var(--tn-border);
+  --border-hover: var(--tn-blue); --text-0: var(--tn-text); --text-1: var(--tn-text); --text-2: var(--tn-text-muted); --text-3: var(--tn-text-subtle); --text-4: var(--tn-text-subtle);
+  --primary: var(--tn-blue); --primary-hover: var(--tn-cyan); --primary-dim: color-mix(in srgb, var(--tn-blue) 20%, transparent); --accent: var(--tn-purple);
+  --success: var(--tn-green); --success-dim: color-mix(in srgb, var(--tn-green) 18%, transparent); --warning: var(--tn-yellow); --warning-dim: color-mix(in srgb, var(--tn-yellow) 18%, transparent); --error: var(--tn-red); --error-dim: color-mix(in srgb, var(--tn-red) 18%, transparent); --info: var(--tn-cyan);
+  --radius: var(--tn-radius-md); --radius-sm: var(--tn-radius-sm); --radius-lg: var(--tn-radius-lg); --transition: .18s ease;
+  --font-mono: var(--tn-font-mono); --font-sans: var(--tn-font-sans); --font-kh: var(--tn-font-kh);
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase-client";
 import { useLang } from "@/lib/i18n";
@@ -31,9 +31,9 @@ type FeatureCardDef = {
   key: string;
   title: { kh: string; en: string };
   subtitle: { kh: string; en: string };
-  icon: string;
+  icon: "telegram" | "plug";
   color: string;
-  href: string | null; // null = not built yet
+  href: string | null;
 };
 
 const FEATURE_CARDS: FeatureCardDef[] = [
@@ -71,15 +71,6 @@ const FEATURE_CARDS: FeatureCardDef[] = [
   },
 ];
 
-/**
- * Public entry point (/dashboard — see AuthGate's PUBLIC_PATHS). Anyone can
- * open and browse it; no Supabase session is required. Real data only shows
- * up once a session exists — otherwise every panel falls back to clearly
- * labeled sample content and a "Demo Mode" badge, same spirit as the
- * reference screenshot. Clicking a feature card that needs real credentials
- * (Telegram Bot Builder → /bot-builder) is what triggers the actual login
- * screen, via the existing AuthGate on that route.
- */
 export function PublicDashboard() {
   const { lang } = useLang();
   const kh = lang === "kh";
@@ -108,66 +99,89 @@ export function PublicDashboard() {
   }, [loggedIn]);
 
   const t = (khText: string, enText: string) => (kh ? khText : enText);
+  const isMember = loggedIn === true;
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-hero">
-        <div>
-          <h1>{t("ផ្ទាំងគ្រប់គ្រង", "Dashboard")}</h1>
-          <p>{t("បង្កើត Bot, Mini App, និង Website ដោយគ្រាន់តែនិយាយអ្វីដែលចង់បាន។", "Build bots, mini apps and websites just by describing what you want.")}</p>
+    <div className="agent-dashboard">
+      <section className="agent-hero" aria-labelledby="agent-dashboard-title">
+        <div className="agent-hero-copy">
+          <div className="agent-eyebrow">✦ {t("AGENT BUILDER AI", "AGENT BUILDER AI")}</div>
+          <h1 id="agent-dashboard-title">
+            {t("បង្កើតអ្វីដែលអ្នកស្រមៃ ដោយមិនចាំបាច់ចាប់ផ្ដើមពីសូន្យ", "Turn an idea into a working product.")}
+          </h1>
+          <p>
+            {t(
+              "ពិពណ៌នាអ្វីដែលអ្នកចង់បាន ហើយចាប់ផ្ដើមពី template ដែលត្រូវនឹងគោលដៅរបស់អ្នក។",
+              "Describe what you want, choose a starting template, and let your builder do the heavy lifting."
+            )}
+          </p>
+          <div className="agent-hero-actions">
+            <Link href="/bot-builder"><Button>{t("ចាប់ផ្ដើមបង្កើត Bot", "Start building a bot")} <span aria-hidden="true">→</span></Button></Link>
+            <span className="agent-hero-note">{t("ចាប់ផ្ដើមជាមួយ Telegram · មិនចាំបាច់ចេះ code", "Start with Telegram · no coding required")}</span>
+          </div>
         </div>
-        {loggedIn === false && <Badge variant="warning">{t("Demo Mode — មិនមាន connection ពិតប្រាកដ", "Demo Mode — no real connections")}</Badge>}
-        {loggedIn === true && <Badge variant="success">{t("បានចូលគណនី", "Signed in")}</Badge>}
-      </header>
-
-      <section className="dashboard-cards">
-        {FEATURE_CARDS.map((c) => (
-          <FeatureCard key={c.key} def={c} kh={kh} />
-        ))}
+        <div className="agent-hero-orbit" aria-hidden="true">
+          <span>✦</span><i>AI</i><b>⌁</b>
+        </div>
       </section>
 
-      <div className="dashboard-columns">
-        <Panel title={t("ការភ្ជាប់ (Connections)", "Connections")} className="dashboard-connections">
-          <ConnectionRow label="GitHub" connected={!!health?.github} />
-          <ConnectionRow label="Claude" connected={!!health?.claude} />
-          <ConnectionRow label="Supabase" connected={!!health?.supabase} />
-          <ConnectionRow label="Telegram" connected={loggedIn === true} />
-          {loggedIn === false && (
-            <p className="connector-meta" style={{ marginTop: 8 }}>
-              {t("ចុច card ខាងលើ ដើម្បីចូលគណនី និងភ្ជាប់ពិតប្រាកដ។", "Click a card above to sign in and connect for real.")}
-            </p>
+      <div className="agent-section-heading">
+        <div>
+          <span className="agent-eyebrow">{t("ចាប់ផ្ដើមរហ័ស", "QUICK START")}</span>
+          <h2>{t("ជ្រើសរើសអ្វីដែលអ្នកចង់បង្កើត", "Choose what you want to build")}</h2>
+        </div>
+        <span className="agent-muted">{t("១ template កំពុងដំណើរការ", "1 template available")}</span>
+      </div>
+
+      <section className="agent-template-grid" aria-label={t("Templates", "Templates")}>
+        {FEATURE_CARDS.map((card) => <FeatureCard key={card.key} def={card} kh={kh} />)}
+      </section>
+
+      <div className="agent-content-grid">
+        <Panel title={t("ស្ថានភាព workspace", "Workspace status")} className="agent-status-panel">
+          <div className="agent-status-summary">
+            <span className={`agent-status-pulse ${isMember ? "on" : "demo"}`} />
+            <div>
+              <strong>{isMember ? t("Workspace របស់អ្នករួចរាល់", "Your workspace is ready") : t("កំពុងមើលជា Demo", "You are viewing demo mode")}</strong>
+              <p>{isMember ? t(`អ្នកមាន ${projectCount ?? 0} គម្រោង`, `You have ${projectCount ?? 0} project(s)`) : t("ចូលគណនី ដើម្បីចាប់ផ្ដើមបង្កើត Bot ពិតប្រាកដ។", "Sign in to start building real projects.")}</p>
+            </div>
+          </div>
+          {isMember && health && (
+            <div className="agent-admin-hint">
+              <span>{t("ការតភ្ជាប់ស្នូលត្រូវបានគ្រប់គ្រងដោយអ្នកគ្រប់គ្រង", "Core connections are managed by admins")}</span>
+              <StatusBadge status="connected" label={t("គណនីបានភ្ជាប់", "Account connected")} />
+            </div>
           )}
+          {!isMember && <p className="agent-panel-note">{t("ទិន្នន័យខាងក្រោមជាទិន្នន័យគំរូសម្រាប់មើលជាមុនប៉ុណ្ណោះ។", "The content below is sample data for preview only.")}</p>}
         </Panel>
 
-        <Panel title={t("គម្រោងរបស់ខ្ញុំ", "My Projects")} className="dashboard-projects">
-          {loggedIn === true ? (
-            <p>{t(`អ្នកមាន ${projectCount ?? 0} គម្រោង`, `You have ${projectCount ?? 0} project(s)`)}</p>
+        <Panel title={t("គម្រោងគំរូ", "Example projects")} className="agent-project-panel">
+          {isMember ? (
+            <div className="agent-empty-projects">
+              <strong>{t(`អ្នកមាន ${projectCount ?? 0} គម្រោង`, `You have ${projectCount ?? 0} project(s)`)}</strong>
+              <span>{t("បើក Bot Builder ដើម្បីបង្កើតគម្រោងថ្មី។", "Open Bot Builder to create a new project.")}</span>
+            </div>
           ) : (
-            <>
-              {SAMPLE_PROJECTS.map((p) => (
-                <div key={p.name} className="dashboard-project-row">
-                  <div>
-                    <div className="dashboard-project-name">{p.name}</div>
-                    <div className="dashboard-project-stack">{p.stack}</div>
-                  </div>
+            <div className="agent-project-list">
+              {SAMPLE_PROJECTS.map((project) => (
+                <div key={project.name} className="agent-project-row">
+                  <span className="agent-project-icon">◇</span>
+                  <div><strong>{project.name}</strong><span>{project.stack}</span></div>
                   <Badge variant="neutral">{t("គំរូ", "sample")}</Badge>
                 </div>
               ))}
-            </>
+            </div>
           )}
         </Panel>
       </div>
 
-      <Panel title={t("ជំហានចាប់ផ្តើម", "Getting started")} className="dashboard-getting-started">
-        <ol>
-          <li>{t("ជ្រើសរើសប្រភេទគម្រោង (ឧ. Telegram Bot Builder)", "Pick a project type (e.g. Telegram Bot Builder)")}</li>
-          <li>{t("ចូលគណនីតាម Telegram ពេលចុចបើក", "Sign in with Telegram when prompted")}</li>
-          <li>{t("ប្រាប់ពី Bot ដែលអ្នកចង់បាន ជាភាសាធម្មតា", "Describe the bot you want in plain language")}</li>
-          <li>{t("ទទួលបាន repo រួចរាល់ ហើយ deploy", "Get a ready-made repo and deploy it")}</li>
-        </ol>
-        <Link href="/bot-builder">
-          <Button>{t("ចាប់ផ្តើមឥឡូវនេះ →", "Get started now →")}</Button>
-        </Link>
+      <Panel title={t("ជំហានបន្ទាប់", "Your next steps")} className="agent-steps-panel">
+        <div className="agent-steps">
+          <div className="agent-step active"><span>1</span><div><strong>{t("ជ្រើសរើស template", "Choose a template")}</strong><small>{t("ចាប់ផ្ដើមពី Telegram Bot Builder", "Start with Telegram Bot Builder")}</small></div></div>
+          <div className="agent-step"><span>2</span><div><strong>{t("ប្រាប់អំពីគំនិតរបស់អ្នក", "Describe your idea")}</strong><small>{t("Bot Builder នឹងសួរសំណួរដែលចាំបាច់", "Bot Builder asks the important questions")}</small></div></div>
+          <div className="agent-step"><span>3</span><div><strong>{t("ទទួលបាន repo រួចរាល់", "Get a ready repo")}</strong><small>{t("ពិនិត្យ ហើយ deploy នៅពេលរួចរាល់", "Review it, then deploy when ready")}</small></div></div>
+        </div>
+        <Link href="/bot-builder" className="agent-step-cta">{t("បើក Bot Builder", "Open Bot Builder")} →</Link>
       </Panel>
     </div>
   );
@@ -177,27 +191,11 @@ function FeatureCard({ def, kh }: { def: FeatureCardDef; kh: boolean }) {
   const title = kh ? def.title.kh : def.title.en;
   const subtitle = kh ? def.subtitle.kh : def.subtitle.en;
   const body = (
-    <div className="dashboard-feature-card" style={{ borderTopColor: def.color }}>
-      <div className="dashboard-feature-icon" style={{ background: def.color }}>
-        {def.icon === "telegram" ? <BrandIcon name="telegram" size={22} /> : "◆"}
-      </div>
-      <div className="dashboard-feature-title">{title}</div>
-      <div className="dashboard-feature-subtitle">{subtitle}</div>
-      {def.href ? (
-        <span className="dashboard-feature-cta">{kh ? "ចុចដើម្បីចាប់ផ្តើម →" : "Click to start →"}</span>
-      ) : (
-        <Badge variant="neutral">{kh ? "ឆាប់ៗនេះ" : "Coming soon"}</Badge>
-      )}
+    <div className={`agent-template-card ${def.href ? "available" : "coming-soon"}`} style={{ "--card-accent": def.color } as CSSProperties}>
+      <div className="agent-template-icon">{def.icon === "telegram" ? <BrandIcon name="telegram" size={22} /> : "◆"}</div>
+      <div className="agent-template-copy"><strong>{title}</strong><span>{subtitle}</span></div>
+      {def.href ? <span className="agent-card-arrow" aria-hidden="true">→</span> : <Badge variant="neutral">{kh ? "ឆាប់ៗនេះ" : "Coming soon"}</Badge>}
     </div>
   );
-  return def.href ? <Link href={def.href}>{body}</Link> : body;
-}
-
-function ConnectionRow({ label, connected }: { label: string; connected: boolean }) {
-  return (
-    <div className="dashboard-connection-row">
-      <span>{label}</span>
-      <StatusBadge status={connected ? "connected" : "disconnected"} />
-    </div>
-  );
+  return def.href ? <Link href={def.href} aria-label={`${title} — ${subtitle}`}>{body}</Link> : body;
 }

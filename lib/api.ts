@@ -105,10 +105,31 @@ export const api = {
 
   githubRepos: () => fetchJson<{ repos: GitHubRepo[] }>("/api/github/repos"),
 
-  syncRepo: (repoFullName: string, force = false) =>
+  githubBranches: (repo: string) =>
+    fetchJson<{ branches: { name: string; protected: boolean }[] }>(
+      `/api/github/branches?repo=${encodeURIComponent(repo)}`
+    ),
+
+  githubConnectorStatus: () =>
+    fetchJson<{
+      connected: boolean;
+      login: string | null;
+      avatarUrl: string | null;
+      scopes: string | null;
+      oauthConfigured: boolean;
+      adminFallback: boolean;
+    }>("/api/connectors/github"),
+
+  githubConnectStart: () =>
+    fetchJson<{ authUrl: string }>("/api/connectors/github/start"),
+
+  githubDisconnect: () =>
+    fetchJson<{ ok: boolean }>("/api/connectors/github", { method: "DELETE" }),
+
+  syncRepo: (repoFullName: string, branch?: string) =>
     fetchJson<{ workspace: Workspace; canPush?: boolean }>("/api/workspace/sync", {
       method: "POST",
-      body: JSON.stringify({ repoFullName, force }),
+      body: JSON.stringify({ repoFullName, branch }),
     }),
 
   listWorkspaces: () =>
@@ -194,6 +215,8 @@ export const api = {
     fetchJson<{
       plan: string;
       dailyLimit: number;
+      unlimited: boolean;
+      isAdmin: boolean;
       today: { requests: number; inputTokens: number; outputTokens: number };
       days: { date: string; requests: number; inputTokens: number; outputTokens: number }[];
     }>("/api/usage"),

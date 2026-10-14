@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
 import { isAdminEmail } from "@/lib/admin";
-import { isGitHubConfigured } from "@/lib/github";
+import { isGitHubConfigured, isGitHubOAuthConfigured } from "@/lib/github";
 import { isClaudeConfigured } from "@/lib/claude";
 import { isVercelConfigured } from "@/lib/vercel";
 import { isTelegramConfigured } from "@/lib/telegram";
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
   const models = isClaudeConfigured();
   return NextResponse.json({
-    github: isGitHubConfigured(),
+    github: isGitHubConfigured() || isGitHubOAuthConfigured(),
     claude: models,
     models,
     supabase: !!(

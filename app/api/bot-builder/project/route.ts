@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
 import { canUseBotBuilder } from "@/lib/bot-builder/access";
-import { isGitHubConfigured, getRepoFile, putRepoFile } from "@/lib/github";
+import { isGitHubConnected, getRepoFile, putRepoFile } from "@/lib/github";
 import { parseBotConfig, serializeBotConfig, type BotConfig } from "@/lib/bot-builder/config";
 import { logActivity } from "@/lib/activities";
 
@@ -27,15 +27,15 @@ export async function GET(req: Request) {
   const { user, error } = await getAuthenticatedUser(req);
   if (error) return error;
   if (!canUseBotBuilder(user?.email)) return notEnabled();
-  if (!isGitHubConfigured()) {
-    return NextResponse.json({ error: "GitHub not configured", setupRequired: true }, { status: 400 });
+  if (!(await isGitHubConnected(user!.id, user!.email))) {
+    return NextResponse.json({ error: "GitHub account is not connected", connectRequired: true }, { status: 400 });
   }
 
   const target = splitRepo(new URL(req.url).searchParams.get("repo"));
   if (!target) return NextResponse.json({ error: "A valid repo is required" }, { status: 400 });
 
   try {
-    const file = await getRepoFile(target.owner, target.repo, CONFIG_PATH);
+    const file = await getRepoFile(user!.id, user!.email, target.owner, target.repo, CONFIG_PATH);
     if (!file) {
       return NextResponse.json(
         { error: `${CONFIG_PATH} was not found in this repo` },
@@ -56,8 +56,8 @@ export async function PUT(req: Request) {
   const { user, error } = await getAuthenticatedUser(req);
   if (error) return error;
   if (!canUseBotBuilder(user?.email)) return notEnabled();
-  if (!isGitHubConfigured()) {
-    return NextResponse.json({ error: "GitHub not configured", setupRequired: true }, { status: 400 });
+  if (!(await isGitHubConnected(user!.id, user!.email))) {
+    return NextResponse.json({ error: "GitHub account is not connected", connectRequired: true }, { status: 400 });
   }
 
   try {
@@ -70,6 +70,8 @@ export async function PUT(req: Request) {
     const config: BotConfig = parsed.config;
 
     const { commit } = await putRepoFile(
+      user!.id,
+      user!.email,
       target.owner,
       target.repo,
       CONFIG_PATH,
