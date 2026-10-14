@@ -204,6 +204,15 @@ const dict = {
     cloning: "កំពុង clone...",
     tryAgain: "ព្យាយាមម្តងទៀត",
     error: "កំហុស",
+    loginTitle: "ចូលគណនី CodingStudio",
+    loginGoogle: "ចូលជាមួយ Google",
+    loginTelegram: "ចូលជាមួយ Telegram",
+    loginEmailInstead: "ប្រើ Email ជំនួស",
+    loginHeadline: "បង្កើតកម្មវិធីដោយមានជំនួយពី AI",
+    loginBenefitOne: "ភ្ជាប់ GitHub និងចាប់ផ្តើមធ្វើការ",
+    loginBenefitTwo: "ពិនិត្យការផ្លាស់ប្តូរមុនពេលអនុវត្ត",
+    loginBenefitThree: "ធ្វើការក្នុង workspace ដាច់ដោយឡែក",
+    loginSigningIn: "កំពុងចូល...",
   },
 
   en: {
@@ -390,6 +399,15 @@ const dict = {
     cloning: "Cloning...",
     tryAgain: "Try Again",
     error: "Error",
+    loginTitle: "Sign in to CodingStudio",
+    loginGoogle: "Continue with Google",
+    loginTelegram: "Sign in with Telegram",
+    loginEmailInstead: "Use email instead",
+    loginHeadline: "Build software with an AI coding workspace",
+    loginBenefitOne: "Connect GitHub and start building",
+    loginBenefitTwo: "Review every change before applying",
+    loginBenefitThree: "Work in an isolated workspace",
+    loginSigningIn: "Signing in...",
   },
 };
 

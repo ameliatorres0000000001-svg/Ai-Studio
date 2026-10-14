@@ -20,6 +20,12 @@ export interface ClaudeResponse {
   usage: Usage;
 }
 
+/**
+ * @deprecated Single-shot code mode is superseded by the Claude Agent SDK
+ * (`/api/agent/stream` + `lib/agent/run.ts`). Research mode still uses
+ * `sendResearch`. This function remains for the `/api/claude/chat` code path
+ * until the UI migrates in Phase 5.
+ */
 export async function sendToClaude(
   model: ResolvedModel,
   effort: Effort | undefined,

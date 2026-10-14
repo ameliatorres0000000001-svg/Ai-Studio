@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { GitHubRepo, Workspace } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { Button, Spinner, ErrorState, EmptyState } from "@/components/ui";
+import { GitHubConnectCard } from "@/components/connectors/GitHubConnectCard";
 
 export function RepoSelector({
   onSelect,
@@ -17,6 +18,7 @@ export function RepoSelector({
   const [syncing, setSyncing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [connectRequired, setConnectRequired] = useState(false);
 
   async function loadRepos() {
     setLoading(true);
@@ -26,7 +28,11 @@ export function RepoSelector({
       setRepos(repos);
       setLoaded(true);
     } catch (e: any) {
-      setError(e.message);
+      if (e?.data?.connectRequired) {
+        setConnectRequired(true);
+      } else {
+        setError(e.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -68,6 +74,17 @@ export function RepoSelector({
           <h3>{lang === "kh" ? "ឃ្លាំងសម្ងាត់ GitHub" : "GitHub Repositories"}</h3>
         </div>
         <Spinner label={t("loadingRepos")} />
+      </div>
+    );
+  }
+
+  if (connectRequired) {
+    return (
+      <div className="panel">
+        <div className="panel-header">
+          <h3>{lang === "kh" ? "ឃ្លាំងសម្ងាត់ GitHub" : "GitHub Repositories"}</h3>
+        </div>
+        <GitHubConnectCard onChanged={loadRepos} />
       </div>
     );
   }

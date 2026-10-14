@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getRepoInfo, getCloneUrl, isGitHubConfigured, isRepoAllowed, parseRepoFullName } from "@/lib/github";
+import { getRepoInfo, getCloneUrl, isGitHubConnected, isRepoAllowed, parseRepoFullName, GitHubNotConnectedError } from "@/lib/github";
 import { cloneRepo, pullLatest, getWorkspacePath, isWorkingTreeClean } from "@/lib/workspace";
-import { getAuthenticatedUser, supabaseAdmin, getOwnedWorkspace, toPublicWorkspace } from "@/lib/supabase-server";
+import { getAuthenticatedUser, supabaseAdmin, toPublicWorkspace } from "@/lib/supabase-server";
 import { logActivity } from "@/lib/activities";
 import fs from "fs";
 
@@ -11,49 +11,33 @@ export async function POST(req: Request) {
   const { user, error: authError } = await getAuthenticatedUser(req);
   if (authError) return authError;
   const userId = user!.id;
+  const userEmail = user!.email;
 
-  if (!isGitHubConfigured()) {
-    return NextResponse.json(
-      {
-        error: "Not connected — Configure in Settings",
-        setupRequired: true,
-        envVars: ["GITHUB_ACCESS_TOKEN"],
-      },
-      { status: 400 }
-    );
+  if (!(await isGitHubConnected(userId, userEmail))) {
+    return NextResponse.json({ error: "GitHub account is not connected", connectRequired: true }, { status: 400 });
   }
 
   try {
-    const { repoFullName } = await req.json();
+    const { repoFullName, branch } = await req.json();
     if (!repoFullName || typeof repoFullName !== "string") {
-      return NextResponse.json(
-        { error: "repoFullName is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "repoFullName is required" }, { status: 400 });
     }
 
     const parsed = parseRepoFullName(repoFullName);
     if (!parsed) {
-      return NextResponse.json(
-        { error: "Invalid repository name. Expected owner/repo format." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid repository name. Expected owner/repo format." }, { status: 400 });
     }
     if (!isRepoAllowed(`${parsed.owner}/${parsed.repo}`)) {
-      return NextResponse.json(
-        { error: "Repository is not allowed" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Repository is not allowed" }, { status: 403 });
     }
 
-    const repoInfo = await getRepoInfo(parsed.owner, parsed.repo);
+    const repoInfo = await getRepoInfo(userId, userEmail, parsed.owner, parsed.repo);
     const canonicalFullName = repoInfo.full_name;
     if (!isRepoAllowed(canonicalFullName)) {
-      return NextResponse.json(
-        { error: "Repository is not allowed" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Repository is not allowed" }, { status: 403 });
     }
+
+    const targetBranch = typeof branch === "string" && branch.trim() ? branch.trim() : repoInfo.default_branch;
 
     const { data: existing } = await supabaseAdmin
       .from("workspaces")
@@ -67,7 +51,7 @@ export async function POST(req: Request) {
 
     if (existing) {
       workspaceId = existing.id;
-      localPath = getWorkspacePath(workspaceId);
+      localPath = getWorkspacePath(workspaceId, userId);
       if (fs.existsSync(localPath)) {
         if (!(await isWorkingTreeClean(localPath))) {
           return NextResponse.json(
@@ -79,14 +63,15 @@ export async function POST(req: Request) {
           .from("workspaces")
           .update({ status: "syncing", updated_at: new Date().toISOString() })
           .eq("id", workspaceId);
-        await pullLatest(localPath, getCloneUrl(parsed.owner, parsed.repo));
+        await pullLatest(localPath, await getCloneUrl(userId, userEmail, parsed.owner, parsed.repo));
       } else {
-        await cloneRepo(workspaceId, getCloneUrl(parsed.owner, parsed.repo), repoInfo.default_branch);
+        await cloneRepo(workspaceId, await getCloneUrl(userId, userEmail, parsed.owner, parsed.repo), targetBranch, userId);
       }
       await supabaseAdmin
         .from("workspaces")
         .update({
           status: "ready",
+          repo_default_branch: targetBranch,
           last_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -98,7 +83,7 @@ export async function POST(req: Request) {
         .insert({
           user_id: userId,
           repo_full_name: canonicalFullName,
-          repo_default_branch: repoInfo.default_branch,
+          repo_default_branch: targetBranch,
           local_path: "",
           status: "syncing",
         })
@@ -109,8 +94,9 @@ export async function POST(req: Request) {
       workspaceId = newWs.id;
       localPath = await cloneRepo(
         workspaceId,
-        getCloneUrl(parsed.owner, parsed.repo),
-        repoInfo.default_branch
+        await getCloneUrl(userId, userEmail, parsed.owner, parsed.repo),
+        targetBranch,
+        userId
       );
 
       await supabaseAdmin
@@ -133,6 +119,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ workspace: ws ? toPublicWorkspace(ws) : ws });
   } catch (error: any) {
+    if (error instanceof GitHubNotConnectedError) {
+      return NextResponse.json({ error: error.message, connectRequired: true }, { status: 400 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

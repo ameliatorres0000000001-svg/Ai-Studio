@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     await commitAndPush(
       workspace.local_path,
       message,
-      getCloneUrl(repo.owner, repo.repo)
+      await getCloneUrl(userId, user!.email, repo.owner, repo.repo)
     );
 
     await logActivity({

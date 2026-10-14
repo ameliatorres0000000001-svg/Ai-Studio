@@ -33,6 +33,7 @@ export function redactSecrets(text: string): string {
   out = out.replace(/\b\d{5,}:[A-Za-z0-9_-]{30,}\b/g, "***");
   for (const key of [
     "GITHUB_ACCESS_TOKEN",
+    "CONNECTOR_ENCRYPTION_KEY",
     "ANTHROPIC_API_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "VERCEL_TOKEN",
@@ -53,16 +54,20 @@ function stripCredentials(url: string): string {
 
 // ─── Paths ───────────────────────────────────────────────────
 
-export function getWorkspacePath(workspaceId: string): string {
+/** WORKSPACE_ROOT/<userId>/<workspaceId> — workspaces are isolated per user. */
+export function getWorkspacePath(workspaceId: string, userId?: string): string {
   if (!UUID_RE.test(workspaceId)) {
     throw new Error("Invalid workspace id");
   }
   ensureWorkspaceRoot();
+  if (userId && UUID_RE.test(userId)) {
+    return path.join(WORKSPACE_ROOT, userId, workspaceId);
+  }
   return path.join(WORKSPACE_ROOT, workspaceId);
 }
 
-export function workspaceExists(workspaceId: string): boolean {
-  return fs.existsSync(path.join(getWorkspacePath(workspaceId), ".git"));
+export function workspaceExists(workspaceId: string, userId?: string): boolean {
+  return fs.existsSync(path.join(getWorkspacePath(workspaceId, userId), ".git"));
 }
 
 /**
@@ -104,9 +109,10 @@ export function resolveInside(root: string, relPath: string): string {
 export async function cloneRepo(
   workspaceId: string,
   authedCloneUrl: string,
-  branch: string
+  branch: string,
+  userId?: string
 ): Promise<string> {
-  const localPath = getWorkspacePath(workspaceId);
+  const localPath = getWorkspacePath(workspaceId, userId);
   if (fs.existsSync(localPath)) {
     fs.rmSync(localPath, { recursive: true, force: true });
   }
