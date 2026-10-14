@@ -7,3 +7,6 @@ Next step: hide Connections for non-admins.
 Done: Connections sidebar section now renders only when /api/admin/me reports isAdmin true; health route already enforces isAdminEmail server-side.
 Files changed: app/page.tsx; npm run typecheck passed.
 Next step: restyle home dashboard.
+Done: workspace now uses a Claude-style dark studio shell with session navigation, artifacts, GitHub attachment menu, execution chat, code and diff panes; root redirects to /workspace.
+Files changed: app/page.tsx; app/workspace/page.tsx; components/WorkspaceStudio.tsx; app/globals.css.
+Next step: verify with npm run typecheck.

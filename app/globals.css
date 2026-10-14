@@ -1070,7 +1070,7 @@ a:has(> .dashboard-feature-card):hover .dashboard-feature-card { border-color: v
 }
 
 /* ── Claude-style workspace studio ───────────────── */
-.workspace-studio { min-height: 100vh; display: flex; background: #0d0e0d; color: #eef0eb; font-family: var(--font-sans); }
+.workspace-studio { min-height: 100vh; display: flex; background: #0b0f17; color: #eef0eb; font-family: var(--font-sans); }
 .workspace-studio.lang-kh { font-family: var(--font-kh), var(--font-sans); }
 .ws-sidebar { width: 248px; flex: 0 0 248px; display: flex; flex-direction: column; border-right: 1px solid #292c29; background: #111311; }
 .ws-account { display: flex; align-items: center; gap: 8px; padding: 15px 12px; border-bottom: 1px solid #292c29; }

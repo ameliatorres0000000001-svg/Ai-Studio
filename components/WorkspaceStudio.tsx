@@ -19,7 +19,7 @@ interface OpenTab {
 }
 
 const ACTION_ITEMS: { icon: ReactNode; label: string; khLabel: string }[] = [
-  { icon: "+", label: "New chat", khLabel: "សន្ទនាថ្មី" },
+  { icon: "+", label: "New session", khLabel: "+ សម័យថ្មី" },
   { icon: "◇", label: "Projects", khLabel: "គម្រោង" },
   { icon: "✦", label: "Artifacts", khLabel: "Artifacts" },
   { icon: "⚙", label: "Customize", khLabel: "កែតម្រូវ" },
@@ -117,7 +117,7 @@ export function WorkspaceStudio() {
 
         <nav className="ws-actions" aria-label={kh ? "សកម្មភាព" : "Actions"}>
           {ACTION_ITEMS.map((item) => (
-            <button key={item.label} type="button" onClick={() => item.label === "Projects" ? setImportOpen(true) : item.label === "New chat" ? setWorkspace(null) : undefined}>
+            <button key={item.label} type="button" onClick={() => item.label === "Projects" ? setImportOpen(true) : item.label === "New session" ? setWorkspace(null) : undefined}>
               <span>{item.icon}</span><span>{kh ? item.khLabel : item.label}</span>
             </button>
           ))}
