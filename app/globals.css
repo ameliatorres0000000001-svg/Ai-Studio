@@ -1,37 +1,4 @@
-:root {
-  --bg-0: #06111e;
-  --bg-1: #0a1626;
-  --bg-2: #0d1d30;
-  --bg-3: #112438;
-  --surface: #0b1b2b;
-  --surface-hover: #102539;
-  --border: #1b3852;
-  --border-subtle: #15304a;
-  --border-hover: #2d5a7e;
-  --text-0: #edf4ff;
-  --text-1: #c5d6ea;
-  --text-2: #8ba1b7;
-  --text-3: #5d7493;
-  --text-4: #3d5870;
-  --primary: #3b6ef0;
-  --primary-hover: #4f7ef5;
-  --primary-dim: #1e3a6f;
-  --accent: #6c5ce7;
-  --success: #2ed573;
-  --success-dim: #0d3a1f;
-  --warning: #f5a623;
-  --warning-dim: #3a2e0a;
-  --error: #ff6b6b;
-  --error-dim: #3a1515;
-  --info: #4fc3f7;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-lg: 14px;
-  --transition: 0.18s ease;
-  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
-  --font-sans: -apple-system, 'Segoe UI', system-ui, sans-serif;
-  --font-kh: Battambang, 'Noto Sans Khmer', sans-serif;
-}
+@import "./styles/tokens.css";
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

@@ -1,31 +1,17 @@
 import "./globals.css";
+import { Inter, JetBrains_Mono, Noto_Sans_Khmer } from "next/font/google";
 import { LanguageProvider } from "@/lib/i18n";
 import { AuthGate } from "@/components/AuthGate";
 
-export const metadata = {
-  title: "CodingStudio",
-  description: "AI Developer Workspace — GitHub-first coding with Coding Agent",
-};
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const khmer = Noto_Sans_Khmer({ subsets: ["khmer"], variable: "--font-khmer", weight: ["400", "600", "700"] });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-loaded" });
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="km">
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Noto+Sans+Khmer:wght@400;600&display=swap"
-        />
-        <link rel="stylesheet" href="/checkout-theme.css" />
-      </head>
-      <body>
-        <LanguageProvider>
-          <AuthGate>{children}</AuthGate>
-        </LanguageProvider>
-      </body>
-    </html>
-  );
+export const metadata = { title: "CodingStudio", description: "AI Developer Workspace — GitHub-first coding with Coding Agent" };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return <html lang="km" className={`${inter.variable} ${khmer.variable} ${mono.variable}`}>
+    <head><link rel="stylesheet" href="/checkout-theme.css" /></head>
+    <body><LanguageProvider><AuthGate>{children}</AuthGate></LanguageProvider></body>
+  </html>;
 }

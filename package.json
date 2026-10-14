@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test:quota": "node scripts/test-quota.mjs",
     "test:bots": "node scripts/test-bot-templates.mjs",
-    "check:setup": "node scripts/check-setup.mjs"
+    "check:setup": "node scripts/check-setup.mjs",
+    "test:gateway": "node --env-file=.env.local scripts/test-gateway.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
