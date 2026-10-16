@@ -4,6 +4,7 @@
 // schema streamed to the API route — never raw tool output to the browser.
 
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { query, tool, createSdkMcpServer, type HookJSONOutput, type HookInput } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
@@ -147,18 +148,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
   const homeDir = path.join(WORKSPACE_ROOT, userId, ".home");
   fs.mkdirSync(homeDir, { recursive: true });
 
-  const gatewayKey = process.env.AI_GATEWAY_API_KEY || "";
-  const authHeader = (process.env.AGENT_AUTH_HEADER || "x-api-key").toLowerCase();
-  const env: Record<string, string> = {
-    PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
-    HOME: homeDir,
-    USER: "studio",
-    LANG: process.env.LANG || "C.UTF-8",
-    CI: "1",
-  };
-  if (process.env.AI_GATEWAY_BASE_URL) env.ANTHROPIC_BASE_URL = process.env.AI_GATEWAY_BASE_URL;
-  if (authHeader === "bearer") env.ANTHROPIC_AUTH_TOKEN = gatewayKey;
-  else env.ANTHROPIC_API_KEY = gatewayKey;
+  const env = gatewayEnv(homeDir);
   env.CLAUDE_AGENT_SDK_CLIENT_APP = "coding-studio/phase4";
 
   const repoClaudeMd = readRepoClaudeMd(cwd);
@@ -258,98 +248,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       },
     });
 
-    const toolIds = new Map<string, string>();
-    let emittedSession = false;
-
-    for await (const message of stream) {
-      if (controller.signal.aborted) break;
-
-      if (message.type === "system" && (message as { subtype?: string }).subtype === "init") {
-        if (!emittedSession) {
-          emittedSession = true;
-          onEvent({ type: "session", sessionId: message.session_id });
-        }
-        continue;
-      }
-
-      if (message.type === "stream_event") {
-        const ev = (message as { event?: { type?: string; delta?: { type?: string; text?: string } } }).event;
-        if (ev?.type === "content_block_delta" && ev.delta?.type === "text_delta" && ev.delta.text) {
-          onEvent({ type: "text_delta", text: ev.delta.text });
-        }
-        continue;
-      }
-
-      if (message.type === "assistant") {
-        const content = (message as { message?: { content?: unknown[] } }).message?.content;
-        if (Array.isArray(content)) {
-          for (const block of content as { type?: string; id?: string; name?: string; input?: unknown; text?: string }[]) {
-            if (block.type === "tool_use" && block.id) {
-              toolIds.set(block.id, block.name || "tool");
-              onEvent({
-                type: "tool_use",
-                id: block.id,
-                name: block.name || "tool",
-                input: summarizeInput((block.input || {}) as Record<string, unknown>),
-              });
-              if (block.name === "TodoWrite" && block.input && typeof block.input === "object") {
-                const todos = (block.input as { todos?: { content?: string; status?: string }[] }).todos;
-                if (Array.isArray(todos)) {
-                  onEvent({
-                    type: "todo",
-                    items: todos.map((t) => ({ content: String(t.content || ""), status: String(t.status || "") })),
-                  });
-                }
-              }
-            }
-          }
-        }
-        continue;
-      }
-
-      if (message.type === "user") {
-        const content = (message as { message?: { content?: unknown } }).message?.content;
-        if (Array.isArray(content)) {
-          for (const block of content as { type?: string; tool_use_id?: string; is_error?: boolean; content?: unknown }[]) {
-            if (block.type === "tool_result" && block.tool_use_id) {
-              onEvent({
-                type: "tool_result",
-                id: block.tool_use_id,
-                ok: !block.is_error,
-                summary: toolResultSummary(block.content ?? (message as { tool_use_result?: unknown }).tool_use_result),
-              });
-            }
-          }
-        }
-        continue;
-      }
-
-      if (message.type === "result") {
-        const result = message as {
-          subtype: string;
-          is_error?: boolean;
-          stop_reason?: string | null;
-          errors?: string[];
-          usage?: { input_tokens?: number; output_tokens?: number };
-          modelUsage?: Record<string, { inputTokens?: number; outputTokens?: number }>;
-        };
-        let inputTokens = result.usage?.input_tokens ?? 0;
-        let outputTokens = result.usage?.output_tokens ?? 0;
-        if (!inputTokens && !outputTokens && result.modelUsage) {
-          for (const mu of Object.values(result.modelUsage)) {
-            inputTokens += mu.inputTokens ?? 0;
-            outputTokens += mu.outputTokens ?? 0;
-          }
-        }
-        onEvent({ type: "usage", inputTokens, outputTokens });
-        onEvent({
-          type: "done",
-          stopReason: result.stop_reason ?? result.subtype,
-          isError: !!result.is_error || result.subtype !== "success",
-          errors: result.errors ?? [],
-        });
-      }
-    }
+    await pipeEvents(stream, controller, onEvent);
   } catch (e: any) {
     if (controller.signal.aborted || signal?.aborted) {
       onEvent({ type: "done", stopReason: "aborted", isError: true, errors: ["Run aborted"] });
@@ -359,5 +258,192 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
   } finally {
     if (signal) signal.removeEventListener("abort", onAbort);
     activeRuns.delete(workspace.id);
+  }
+}
+
+/** Maps the Agent SDK message stream onto AgentEvent (shared by workspace and platform agents). */
+async function pipeEvents(stream: AsyncIterable<any>, controller: AbortController, onEvent: (event: AgentEvent) => void): Promise<void> {
+  const toolIds = new Map<string, string>();
+  let emittedSession = false;
+
+  for await (const message of stream) {
+    if (controller.signal.aborted) break;
+
+    if (message.type === "system" && (message as { subtype?: string }).subtype === "init") {
+      if (!emittedSession) {
+        emittedSession = true;
+        onEvent({ type: "session", sessionId: message.session_id });
+      }
+      continue;
+    }
+
+    if (message.type === "stream_event") {
+      const ev = (message as { event?: { type?: string; delta?: { type?: string; text?: string } } }).event;
+      if (ev?.type === "content_block_delta" && ev.delta?.type === "text_delta" && ev.delta.text) {
+        onEvent({ type: "text_delta", text: ev.delta.text });
+      }
+      continue;
+    }
+
+    if (message.type === "assistant") {
+      const content = (message as { message?: { content?: unknown[] } }).message?.content;
+      if (Array.isArray(content)) {
+        for (const block of content as { type?: string; id?: string; name?: string; input?: unknown; text?: string }[]) {
+          if (block.type === "tool_use" && block.id) {
+            toolIds.set(block.id, block.name || "tool");
+            onEvent({
+              type: "tool_use",
+              id: block.id,
+              name: block.name || "tool",
+              input: summarizeInput((block.input || {}) as Record<string, unknown>),
+            });
+            if (block.name === "TodoWrite" && block.input && typeof block.input === "object") {
+              const todos = (block.input as { todos?: { content?: string; status?: string }[] }).todos;
+              if (Array.isArray(todos)) {
+                onEvent({
+                  type: "todo",
+                  items: todos.map((t) => ({ content: String(t.content || ""), status: String(t.status || "") })),
+                });
+              }
+            }
+          }
+        }
+      }
+      continue;
+    }
+
+    if (message.type === "user") {
+      const content = (message as { message?: { content?: unknown } }).message?.content;
+      if (Array.isArray(content)) {
+        for (const block of content as { type?: string; tool_use_id?: string; is_error?: boolean; content?: unknown }[]) {
+          if (block.type === "tool_result" && block.tool_use_id) {
+            onEvent({
+              type: "tool_result",
+              id: block.tool_use_id,
+              ok: !block.is_error,
+              summary: toolResultSummary(block.content ?? (message as { tool_use_result?: unknown }).tool_use_result),
+            });
+          }
+        }
+      }
+      continue;
+    }
+
+    if (message.type === "result") {
+      const result = message as {
+        subtype: string;
+        is_error?: boolean;
+        stop_reason?: string | null;
+        errors?: string[];
+        usage?: { input_tokens?: number; output_tokens?: number };
+        modelUsage?: Record<string, { inputTokens?: number; outputTokens?: number }>;
+      };
+      let inputTokens = result.usage?.input_tokens ?? 0;
+      let outputTokens = result.usage?.output_tokens ?? 0;
+      if (!inputTokens && !outputTokens && result.modelUsage) {
+        for (const mu of Object.values(result.modelUsage)) {
+          inputTokens += mu.inputTokens ?? 0;
+          outputTokens += mu.outputTokens ?? 0;
+        }
+      }
+      onEvent({ type: "usage", inputTokens, outputTokens });
+      onEvent({
+        type: "done",
+        stopReason: result.stop_reason ?? result.subtype,
+        isError: !!result.is_error || result.subtype !== "success",
+        errors: result.errors ?? [],
+      });
+    }
+  }
+}
+
+function gatewayEnv(homeDir: string): Record<string, string> {
+  const gatewayKey = process.env.AI_GATEWAY_API_KEY || "";
+  const authHeader = (process.env.AGENT_AUTH_HEADER || "x-api-key").toLowerCase();
+  const env: Record<string, string> = {
+    PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
+    HOME: homeDir,
+    USER: "studio",
+    LANG: process.env.LANG || "C.UTF-8",
+    CI: "1",
+  };
+  if (process.env.AI_GATEWAY_BASE_URL) env.ANTHROPIC_BASE_URL = process.env.AI_GATEWAY_BASE_URL;
+  if (authHeader === "bearer") env.ANTHROPIC_AUTH_TOKEN = gatewayKey;
+  else env.ANTHROPIC_API_KEY = gatewayKey;
+  return env;
+}
+
+export interface RunToolAgentOptions {
+  model: ResolvedModel;
+  prompt: string;
+  /** Appended to the preset system prompt (rules + the ONE project's context). */
+  system: string;
+  /** In-process MCP tools; they are the agent's entire tool surface. */
+  tools: ReturnType<typeof tool<any>>[];
+  serverName: string;
+  signal?: AbortSignal;
+  maxTurns?: number;
+  onEvent: (event: AgentEvent) => void;
+}
+
+/**
+ * Platform agent runner: no built-in tools (no files, no shell, no web), only
+ * the MCP tools the caller passes — e.g. lib/builder/agent.ts scopes them to one
+ * project's repo/config/deploy actions. Runs in an empty scratch directory.
+ */
+export async function runToolAgent(opts: RunToolAgentOptions): Promise<void> {
+  const { model, prompt, system, tools, serverName, signal, onEvent } = opts;
+  if (model.route.format !== "anthropic") throw new Error("Agent mode needs a Claude model");
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+  }
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "ts-agent-"));
+  const env = gatewayEnv(cwd);
+  env.CLAUDE_AGENT_SDK_CLIENT_APP = "telescripts/platform-agent";
+  const allowed = tools.map((t: { name: string }) => `mcp__${serverName}__${t.name}`);
+  const hooks = {
+    PreToolUse: [
+      {
+        hooks: [
+          async (input: HookInput): Promise<HookJSONOutput> => {
+            if (input.hook_event_name !== "PreToolUse") return { continue: true } as HookJSONOutput;
+            const name = String(input.tool_name || "");
+            if (allowed.includes(name)) return { continue: true } as HookJSONOutput;
+            return { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: "Tool is not on the platform agent allowlist" } as HookJSONOutput;
+          },
+        ],
+      },
+    ],
+  };
+  try {
+    const stream = query({
+      prompt,
+      options: {
+        cwd,
+        model: model.config.upstreamModel,
+        tools: [],
+        allowedTools: allowed,
+        mcpServers: { [serverName]: createSdkMcpServer({ name: serverName, tools }) },
+        strictMcpConfig: true,
+        settingSources: [],
+        systemPrompt: { type: "preset", preset: "claude_code", append: system },
+        permissionMode: "default",
+        permissionPrompts: "none",
+        hooks,
+        env,
+        includePartialMessages: true,
+        abortController: controller,
+        maxTurns: opts.maxTurns ?? 12,
+      },
+    });
+    await pipeEvents(stream, controller, onEvent);
+  } catch (e: any) {
+    onEvent({ type: "error", message: redactSecrets(e?.message || "Agent run failed") });
+  } finally {
+    if (signal) signal.removeEventListener("abort", onAbort);
+    fs.rmSync(cwd, { recursive: true, force: true });
   }
 }
