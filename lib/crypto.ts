@@ -35,3 +35,19 @@ export function verifySignature(payload: string, signature: string): boolean {
   const a = Buffer.from(expected), b = Buffer.from(signature);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+/** URL-safe random secret (Telegram secret_token allows A-Z a-z 0-9 _ -, 1-256 chars). */
+export function randomSecret(bytes = 32): string {
+  return crypto.randomBytes(bytes).toString("base64url");
+}
+
+/**
+ * Minimal HS256 JWT signer (RFC 7519) — used to mint the per-bot data token the
+ * shared Supabase project verifies with its JWT secret. No dependency needed.
+ */
+export function signJwtHs256(payload: Record<string, unknown>, secret: string): string {
+  const enc = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
+  const head = `${enc({ alg: "HS256", typ: "JWT" })}.${enc(payload)}`;
+  const sig = crypto.createHmac("sha256", secret).update(head).digest("base64url");
+  return `${head}.${sig}`;
+}
