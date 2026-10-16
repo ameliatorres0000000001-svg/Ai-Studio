@@ -1,21 +1,114 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { useLang } from "@/lib/i18n";
 import type { TelegramStatus } from "@/lib/types";
-import { Button, StatusBadge, BrandIcon } from "@/components/ui";
+import { BrandIcon } from "@/components/ui";
+import { Badge, BottomSheet, Button, Card, Field, Icon, Input, type Tone } from "@/components/ui/primitives";
 
 export const TELEGRAM_CHANGED_EVENT = "telegram-status-changed";
 
+/**
+ * 04 Secure connect — reassuring 3-step Telegram deep link (Managed Bots). The
+ * link is generated server-side: https://t.me/newbot/{manager}/{username}?name=…
+ * The user only taps "Allow" in Telegram; the bot is created for them and the
+ * platform receives its token directly from Telegram. The UI never asks for a
+ * token, password or key. The screen moves on by itself once the bot is linked.
+ */
+export function SecureConnect({ link, botUsername, linked, onBack }: { link: string | null; botUsername: string | null; linked: boolean; onBack?: () => void }) {
+  const [sheet, setSheet] = useState(false);
+
+  function openTelegram() {
+    if (!link) return;
+    window.open(link, "_blank", "noopener,noreferrer");
+    setSheet(true);
+  }
+
+  const handle = botUsername || "Bot ថ្មីរបស់អ្នក";
+  return (
+    <div className="ts-connect">
+      <section className="ts-connect-hero">
+        <span className="ts-connect-shield"><Icon name="shield" size={36} /></span>
+        <span className="ts-pill ts-pill-success"><span className="ui-status-dot ui-dot-green" />TeleScripts Instant Shield</span>
+        <h2>ការភ្ជាប់ Telegram ដោយសុវត្ថិភាព</h2>
+        <p>បង្កើតនិងភ្ជាប់ Bot អាជីវកម្មរបស់អ្នកដោយចុចតែម្តងគត់ ដោយគ្មានភាពស្មុគស្មាញ។</p>
+      </section>
+
+      <div className="ts-secure">
+        <span className="ts-secure-icon"><Icon name="lock" size={20} /></span>
+        <div>
+          <strong>សុវត្ថិភាព 100% មិនប៉ះពាល់ទិន្នន័យ</strong>
+          <p>ពាក្យសម្ងាត់ និងកូនសោសម្ងាត់មិនត្រូវបានបង្ហាញដល់ AI ឬភាគីទីបីឡើយ។ គ្មានការស្នើសុំលេខកូដសម្ងាត់ ឬ BotFather Token ក្នុងផ្ទាំងជជែកឡើយ។</p>
+        </div>
+      </div>
+
+      <section className="ts-stack" style={{ gap: 14 }}>
+        <div className="ts-between" style={{ padding: "0 4px" }}>
+          <span className="ts-connect-steps-title">ដំណើរការរហ័ស ៣ ជំហាន</span>
+          <span className="ts-pill ts-pill-accent" style={{ alignSelf: "auto" }}>សាមញ្ញ &amp; ស្វ័យប្រវត្តិ</span>
+        </div>
+        <div className="ts-connect-step">
+          <span className="ts-step-num active">1</span>
+          <div><h3>ជំហានទី 1</h3><p>ចុចប៊ូតុង <b className="ts-accent-text">&quot;ភ្ជាប់ទៅកាន់ Telegram&quot;</b> ខាងក្រោមនេះ ដើម្បីបើកដំណើរការភ្លាមៗ។</p></div>
+        </div>
+        <div className="ts-connect-step">
+          <span className="ts-step-num">2</span>
+          <div><h3>ជំហានទី 2</h3><p>Telegram នឹងបើកឡើង ហើយសួរអ្នកដើម្បីអនុញ្ញាតបង្កើត bot ឈ្មោះ <span className="ts-handle-chip">{handle}</span></p></div>
+        </div>
+        <div className="ts-connect-step">
+          <span className={`ts-step-num${linked ? " active" : ""}`}>3</span>
+          <div><h3>ជំហានទី 3</h3><p>ចុច <b className="ts-success-text">&quot;អនុញ្ញាត (Allow)&quot;</b> ក្នុង Telegram ហើយប្រព័ន្ធនឹងភ្ជាប់ដោយស្វ័យប្រវត្តិតែម្តង។</p></div>
+        </div>
+      </section>
+
+      <div className="ts-hint ts-hint-plain">
+        <span className="ts-tile ts-tile-sm" style={{ background: "var(--color-surface-high)", color: "var(--color-text-variant)" }}><Icon name="verified" size={18} /></span>
+        <p>មិនចាំបាច់មានចំណេះដឹងកូដ មិនចាំបាច់រៀបចំ Server ឬបង្កើត BotFather ដោយដៃឡើយ។</p>
+      </div>
+
+      <div className="ts-stack" style={{ gap: 12 }}>
+        <button type="button" className="ts-tg-cta" onClick={openTelegram} disabled={!link} aria-busy={!link}>
+          {link ? <Icon name="send" size={20} /> : <span className="ui-spinner ui-spinner-sm" aria-hidden="true" />}
+          <span>{link ? "ភ្ជាប់ទៅកាន់ Telegram ដោយចុចតែម្តង ✈️" : "កំពុងរៀបចំតំណ..."}</span>
+        </button>
+        <div className="ts-help-row">
+          <Icon name="headset" size={18} />
+          <span>ត្រូវការជំនួយពីអ្នកជំនាញ?</span>
+          <Link href="/help">ជជែកជាមួយក្រុមការងារ</Link>
+        </div>
+        {onBack && <Button variant="ghost" size="sm" icon="arrowLeft" onClick={onBack}>ត្រឡប់ទៅកែទិន្នន័យ</Button>}
+      </div>
+
+      <BottomSheet open={sheet && !linked} onClose={() => setSheet(false)}>
+        <span className="ts-tile ts-tile-success ts-tile-round"><Icon name="lock" size={26} className="ui-pulse" /></span>
+        <h3 className="ui-sheet-title">កំពុងបញ្ជូនទៅកាន់ Telegram...</h3>
+        <p className="ts-small ts-variant" style={{ marginBottom: 8 }}>សូមចុច &quot;Allow&quot; នៅលើផ្ទាំង Telegram ផ្លូវការ ដើម្បីបញ្ចប់ការភ្ជាប់ bot {handle} របស់អ្នក។ អេក្រង់នេះនឹងបន្តដោយស្វ័យប្រវត្តិ។</p>
+        <Button block variant="secondary" onClick={() => setSheet(false)}>យល់ព្រម</Button>
+        {link && <a className="ts-link" href={link} target="_blank" rel="noopener noreferrer">បើក Telegram ម្តងទៀត</a>}
+      </BottomSheet>
+    </div>
+  );
+}
+
+/* ── Settings → Connectors card (workspace notifications bot) ─────────────── */
+
 type UiState = "not_connected" | "connecting" | "connected" | "error" | "disconnected";
 
-const BADGE: Record<UiState, "connected" | "disconnected" | "pending" | "error" | "idle"> = {
-  not_connected: "idle",
-  connecting: "pending",
-  connected: "connected",
-  error: "error",
-  disconnected: "idle",
+const TONE: Record<UiState, Tone> = {
+  not_connected: "neutral",
+  connecting: "blue",
+  connected: "green",
+  error: "red",
+  disconnected: "neutral",
+};
+
+const LABELS: Record<UiState, string> = {
+  not_connected: "មិនបានតភ្ជាប់",
+  connecting: "កំពុងតភ្ជាប់…",
+  connected: "បានតភ្ជាប់",
+  error: "កំហុសក្នុងការតភ្ជាប់",
+  disconnected: "បានផ្តាច់",
 };
 
 /**
@@ -24,8 +117,6 @@ const BADGE: Record<UiState, "connected" | "disconnected" | "pending" | "error" 
  * The bot token lives on the server and is never requested, sent or shown here.
  */
 export function TelegramConnector() {
-  const { lang } = useLang();
-  const kh = lang === "kh";
   const [status, setStatus] = useState<TelegramStatus | null>(null);
   const [busy, setBusy] = useState<null | "connect" | "test" | "disconnect">(null);
   const [flowOpen, setFlowOpen] = useState(false);
@@ -53,14 +144,6 @@ export function TelegramConnector() {
   const state: UiState = busy === "connect" ? "connecting" : status?.state ?? "not_connected";
   const connected = state === "connected";
 
-  const labels: Record<UiState, string> = {
-    not_connected: kh ? "មិនបានតភ្ជាប់" : "Not connected",
-    connecting: kh ? "កំពុងតភ្ជាប់…" : "Connecting…",
-    connected: kh ? "បានតភ្ជាប់" : "Connected",
-    error: kh ? "កំហុសក្នុងការតភ្ជាប់" : "Connection error",
-    disconnected: kh ? "បានផ្តាច់" : "Disconnected",
-  };
-
   async function connect() {
     setBusy("connect");
     setMessage(null);
@@ -69,7 +152,7 @@ export function TelegramConnector() {
       apply(s);
       setFlowOpen(false);
       setChatId("");
-      setMessage({ kind: "ok", text: kh ? "បានផ្ទៀងផ្ទាត់ និងតភ្ជាប់ Telegram។" : "Telegram verified and connected." });
+      setMessage({ kind: "ok", text: "បានផ្ទៀងផ្ទាត់ និងតភ្ជាប់ Telegram។" });
     } catch (e: any) {
       setMessage({ kind: "error", text: e?.message || "Connection failed" });
       await refresh(); // pick up the stored "error" state
@@ -85,12 +168,7 @@ export function TelegramConnector() {
     try {
       const s = await api.telegramTest();
       apply(s);
-      setMessage({
-        kind: "ok",
-        text: s.sentToChat
-          ? kh ? "តេស្តជោគជ័យ — បានផ្ញើសារទៅ chat។" : "Test passed — a message was sent to your chat."
-          : kh ? "តេស្តជោគជ័យ — bot ឆ្លើយតប។" : "Test passed — the bot responded.",
-      });
+      setMessage({ kind: "ok", text: s.sentToChat ? "តេស្តជោគជ័យ — បានផ្ញើសារទៅ chat។" : "តេស្តជោគជ័យ — bot ឆ្លើយតប។" });
     } catch (e: any) {
       setMessage({ kind: "error", text: e?.message || "Test failed" });
       await refresh();
@@ -105,7 +183,7 @@ export function TelegramConnector() {
     setMessage(null);
     try {
       apply(await api.telegramDisconnect());
-      setMessage({ kind: "ok", text: kh ? "បានផ្តាច់ Telegram។" : "Telegram disconnected." });
+      setMessage({ kind: "ok", text: "បានផ្តាច់ Telegram។" });
     } catch (e: any) {
       setMessage({ kind: "error", text: e?.message || "Disconnect failed" });
     } finally {
@@ -118,123 +196,65 @@ export function TelegramConnector() {
   const working = busy !== null;
 
   return (
-    <div className="connector-card">
-      <div className="connector-head">
-        <div className="connector-title">
+    <Card className="ts-stack">
+      <div className="ts-between">
+        <div className="ts-row">
           <BrandIcon name="telegram" size={28} />
           <strong>Telegram</strong>
-          <small className="connector-optional">{kh ? "ជម្រើស (Optional)" : "Optional"}</small>
+          <span className="ts-micro ts-muted">ជម្រើស (Optional)</span>
         </div>
-        <StatusBadge status={BADGE[state]} label={labels[state]} />
+        <Badge tone={TONE[state]} dot>{LABELS[state]}</Badge>
       </div>
 
-      {state === "not_connected" || state === "disconnected" ? (
-        <p>{kh ? "Telegram មិនបានតភ្ជាប់ — Claude Code ដំណើរការធម្មតា។" : "Telegram not connected — Claude Code works normally without it."}</p>
-      ) : null}
+      {(state === "not_connected" || state === "disconnected") && <p className="ts-small ts-muted">Telegram មិនបានតភ្ជាប់ — កម្មវិធីដំណើរការធម្មតា។</p>}
 
       {connected && status?.bot && (
-        <p>
-          {kh ? "Bot" : "Bot"}: <strong>{status.bot.username ? `@${status.bot.username}` : status.bot.name}</strong>
-          {status.chat && (
-            <>
-              {" · "}
-              {kh ? "Chat" : "Chat"}: <strong>{status.chat.title || status.chat.id}</strong>
-            </>
-          )}
+        <p className="ts-small">
+          Bot: <strong>{status.bot.username ? `@${status.bot.username}` : status.bot.name}</strong>
+          {status.chat && <>{" · "}Chat: <strong>{status.chat.title || status.chat.id}</strong></>}
         </p>
       )}
       {status?.lastCheckedAt && (state === "connected" || state === "error") && (
-        <p className="connector-meta">
-          {kh ? "ពិនិត្យចុងក្រោយ" : "Last checked"}: {new Date(status.lastCheckedAt).toLocaleString()}
-        </p>
+        <p className="ts-small ts-muted">ពិនិត្យចុងក្រោយ: {new Date(status.lastCheckedAt).toLocaleString("km-KH")}</p>
       )}
-      {state === "error" && status?.lastError && (
-        <p className="connector-error">{status.lastError}</p>
-      )}
-      {status?.unavailable && (
-        <p className="connector-meta">
-          {kh
-            ? "មិនអាចអានស្ថានភាព Telegram បានទេ (ប្រហែលជាមិនទាន់ run migration)។"
-            : "Telegram status is unavailable (the telegram_connections migration may not be applied)."}
-        </p>
-      )}
+      {state === "error" && status?.lastError && <p className="ts-error">{status.lastError}</p>}
+      {status?.unavailable && <p className="ts-small ts-muted">មិនអាចអានស្ថានភាព Telegram បានទេ (ប្រហែលជាមិនទាន់ run migration)។</p>}
 
-      <div className="connector-actions">
-        <Button className="btn-sm" onClick={() => { setFlowOpen(true); setMessage(null); refresh(); }} disabled={working || connected}>
-          {kh ? "តភ្ជាប់ Telegram" : "Connect Telegram"}
-        </Button>
-        <Button variant="secondary" className="btn-sm" onClick={test} disabled={working || !canTest}>
-          {busy === "test" ? (kh ? "កំពុងតេស្ត…" : "Testing…") : kh ? "តេស្តការតភ្ជាប់" : "Test Connection"}
-        </Button>
-        <Button variant="danger" className="btn-sm" onClick={disconnect} disabled={working || !canDisconnect}>
-          {kh ? "ផ្តាច់" : "Disconnect"}
-        </Button>
+      <div className="ts-row" style={{ flexWrap: "wrap" }}>
+        <Button size="sm" onClick={() => { setFlowOpen(true); setMessage(null); refresh(); }} disabled={working || connected}>តភ្ជាប់ Telegram</Button>
+        <Button size="sm" variant="secondary" onClick={test} disabled={working || !canTest} loading={busy === "test"}>តេស្តការតភ្ជាប់</Button>
+        <Button size="sm" variant="danger" onClick={disconnect} disabled={working || !canDisconnect}>ផ្តាច់</Button>
       </div>
 
-      {message && (
-        <p className={message.kind === "error" ? "connector-error" : "connector-ok"}>{message.text}</p>
-      )}
+      {message && <p className={message.kind === "error" ? "ts-error" : "ts-notice"}>{message.text}</p>}
 
       {flowOpen && !connected && (
-        <div className="setup-box">
+        <Card tone="tint" className="ts-stack">
           {status && !status.configured ? (
             <>
-              <p>
-                <strong>{kh ? "ជំហានដំឡើង" : "Setup required"}</strong>
-              </p>
-              <p>
-                1. {kh ? "បើក" : "Open"}{" "}
-                <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>{" "}
-                {kh ? "ហើយបង្កើត bot ដោយប្រើ /newbot។" : "in Telegram and create a bot with /newbot."}
-              </p>
-              <p>
-                2. {kh ? "កំណត់" : "Set"} <code>TELEGRAM_BOT_TOKEN</code>{" "}
-                {kh ? "ជា environment variable លើ server (មិនដាក់ក្នុង code ឬ browser)។" : "as a server environment variable (never in code or the browser)."}
-              </p>
-              <p>3. {kh ? "Redeploy/restart server រួចចុច Re-check។" : "Restart/redeploy the server, then click Re-check."}</p>
-              <div className="connector-actions">
-                <Button variant="secondary" className="btn-sm" onClick={refresh} disabled={working}>
-                  Re-check
-                </Button>
-                <Button variant="ghost" className="btn-sm" onClick={() => setFlowOpen(false)}>
-                  {kh ? "បោះបង់" : "Cancel"}
-                </Button>
+              <strong>ជំហានដំឡើង (សម្រាប់អ្នកគ្រប់គ្រង server)</strong>
+              <p className="ts-small">1. បើក <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a> ហើយបង្កើត bot ដោយប្រើ /newbot។</p>
+              <p className="ts-small">2. កំណត់ <code>TELEGRAM_BOT_TOKEN</code> ជា environment variable លើ server (មិនដាក់ក្នុង code, browser ឬផ្ទាំងជជែក)។</p>
+              <p className="ts-small">3. Restart server រួចចុច &quot;ពិនិត្យម្តងទៀត&quot;។</p>
+              <div className="ts-row">
+                <Button size="sm" variant="secondary" onClick={refresh} disabled={working}>ពិនិត្យម្តងទៀត</Button>
+                <Button size="sm" variant="ghost" onClick={() => setFlowOpen(false)}>បោះបង់</Button>
               </div>
             </>
           ) : (
             <>
-              <p>
-                {kh
-                  ? "Server នឹងផ្ទៀងផ្ទាត់ bot token របស់វាជាមួយ Telegram។ token មិនត្រូវបានផ្ញើទៅ browser ទេ។"
-                  : "The server will verify its bot token with Telegram. The token is never sent to your browser."}
-              </p>
-              <p>
-                {kh
-                  ? "(ជម្រើស) Chat ID សម្រាប់ទទួលសារ — ផ្ញើ /start ទៅ bot របស់អ្នកជាមុន:"
-                  : "(Optional) Chat ID to receive messages — send /start to your bot first:"}
-              </p>
-              <input
-                className="connector-input"
-                value={chatId}
-                onChange={(e) => setChatId(e.target.value)}
-                placeholder="123456789  or  -1001234567890  or  @channelname"
-                disabled={working}
-                inputMode="text"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <div className="connector-actions">
-                <Button className="btn-sm" onClick={connect} disabled={working || !status}>
-                  {busy === "connect" ? (kh ? "កំពុងផ្ទៀងផ្ទាត់…" : "Verifying…") : kh ? "ផ្ទៀងផ្ទាត់ & តភ្ជាប់" : "Verify & connect"}
-                </Button>
-                <Button variant="ghost" className="btn-sm" onClick={() => setFlowOpen(false)} disabled={working}>
-                  {kh ? "បោះបង់" : "Cancel"}
-                </Button>
+              <p className="ts-small">Server នឹងផ្ទៀងផ្ទាត់ bot token របស់វាជាមួយ Telegram។ token មិនត្រូវបានផ្ញើទៅ browser ទេ។</p>
+              <Field label="(ជម្រើស) Chat ID សម្រាប់ទទួលសារ" hint="ផ្ញើ /start ទៅ bot របស់អ្នកជាមុនសិន">
+                <Input value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="123456789  ឬ  -1001234567890  ឬ  @channelname" disabled={working} inputMode="text" autoComplete="off" spellCheck={false} />
+              </Field>
+              <div className="ts-row">
+                <Button size="sm" onClick={connect} disabled={working || !status} loading={busy === "connect"}>ផ្ទៀងផ្ទាត់ &amp; តភ្ជាប់</Button>
+                <Button size="sm" variant="ghost" onClick={() => setFlowOpen(false)} disabled={working}>បោះបង់</Button>
               </div>
             </>
           )}
-        </div>
+        </Card>
       )}
-    </div>
+    </Card>
   );
 }
