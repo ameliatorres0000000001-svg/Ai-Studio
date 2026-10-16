@@ -1,4 +1,117 @@
+/*
+ * TeleScripts Agent design tokens (docs/design/telescripts/tokens.css) — the
+ * default LIGHT theme. The previous Tokyo Night palette lives unchanged under
+ * [data-theme="dark"] below; legacy surfaces (IDE workspace, admin) opt into it.
+ */
 :root {
+  color-scheme: light;
+
+  /* ── TeleScripts Agent tokens (verbatim from the design) ── */
+  --color-bg: #FAF9F6;
+  --color-surface: #FFFFFF;
+  --color-surface-tint: #F4F2EC;
+  --color-surface-dim: #ECE9E1;
+  --color-border: #E8E5DF;
+  --color-border-hover: #D7D2C8;
+
+  --color-text-primary: #2B2A27;
+  --color-text-secondary: #6F6B63;
+  --color-text-tertiary: #9E9A90;
+
+  --color-accent-primary: #3B527E;
+  --color-accent-hover: #32466C;
+  --color-accent-gradient: linear-gradient(135deg, #3B527E 0%, #4B6396 100%);
+  --color-accent-surface: #EEF2F8;
+
+  --color-success: #5E9C76;
+  --color-success-bg: #EDF6F0;
+  --color-warning: #C99A3E;
+  --color-warning-bg: #FAF4E8;
+  --color-error: #C65F5F;
+  --color-error-bg: #FBEFEF;
+
+  /* Extended tones used by the screen mockups (stitch palette) */
+  --color-accent-strong: #233B65;
+  --color-accent-container: #D8E2FF;
+  --color-accent-muted: #AFC7FA;
+  --color-success-strong: #2C6A48;
+  --color-success-container: #ADEEC3;
+  --color-success-soft: #B0F1C6;
+  --color-success-on: #306E4C;
+  --color-warning-container: #FFDEA7;
+  --color-warning-strong: #503700;
+  --color-warning-dim: #F2BF5F;
+  --color-surface-low: #F7F3EE;
+  --color-surface-mid: #F1EDE8;
+  --color-surface-high: #ECE7E3;
+  --color-surface-highest: #E6E2DD;
+  --color-text-variant: #44474F;
+  --color-outline: #747780;
+  --color-outline-variant: #C4C6D0;
+  --color-scrim: rgba(49, 48, 45, 0.4);
+
+  /* Typography */
+  --font-khmer: var(--font-kantumruy), 'Kantumruy Pro', var(--font-noto-khmer), 'Noto Sans Khmer', -apple-system, sans-serif;
+  --font-latin: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-ui: var(--font-kantumruy), 'Kantumruy Pro', var(--font-inter), 'Inter', var(--font-noto-khmer), -apple-system, sans-serif;
+  --line-height-khmer: 1.75;
+  --min-body-size: 15px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  --radius-card: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(43, 42, 39, 0.03);
+  --shadow-card: 0 2px 10px rgba(43, 42, 39, 0.04), 0 1px 3px rgba(43, 42, 39, 0.02);
+  --shadow-float: 0 6px 20px rgba(43, 42, 39, 0.07);
+  --shadow-sheet: 0 -4px 20px rgba(43, 42, 39, 0.08);
+
+  /* Touch & metrics */
+  --touch-target: 44px;
+  --app-max-width: 420px;
+  --topbar-height: 64px;
+  --bottomnav-height: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* ── Legacy aliases (globals.css, components/ui.tsx) mapped onto the light theme ── */
+  --tn-bg: var(--color-bg);
+  --tn-surface: var(--color-surface);
+  --tn-surface-raised: var(--color-surface-tint);
+  --tn-surface-hover: var(--color-surface-dim);
+  --tn-border: var(--color-border);
+  --tn-text: var(--color-text-primary);
+  --tn-text-muted: var(--color-text-secondary);
+  --tn-text-subtle: var(--color-text-tertiary);
+  --tn-blue: var(--color-accent-primary);
+  --tn-cyan: var(--color-accent-hover);
+  --tn-green: var(--color-success);
+  --tn-yellow: var(--color-warning);
+  --tn-red: var(--color-error);
+  --tn-purple: #6B5B95;
+  --tn-radius-sm: 6px;
+  --tn-radius-md: 8px;
+  --tn-radius-lg: 12px;
+  --tn-font-sans: var(--font-ui);
+  --tn-font-kh: var(--font-khmer);
+  --tn-font-mono: var(--font-mono-loaded), "JetBrains Mono", monospace;
+  --bg-0: var(--color-bg); --bg-1: var(--color-surface); --bg-2: var(--color-surface-tint); --bg-3: var(--color-surface-dim);
+  --surface: var(--color-surface); --surface-hover: var(--color-surface-tint); --border: var(--color-border); --border-subtle: var(--color-border);
+  --border-hover: var(--color-border-hover); --text-0: var(--color-text-primary); --text-1: var(--color-text-primary); --text-2: var(--color-text-secondary); --text-3: var(--color-text-tertiary); --text-4: var(--color-text-tertiary);
+  --primary: var(--color-accent-primary); --primary-hover: var(--color-accent-hover); --primary-dim: var(--color-accent-surface); --accent: var(--color-accent-primary);
+  --success: var(--color-success); --success-dim: var(--color-success-bg); --warning: var(--color-warning); --warning-dim: var(--color-warning-bg); --error: var(--color-error); --error-dim: var(--color-error-bg); --info: var(--color-accent-primary);
+  --radius: var(--tn-radius-md); --transition: .18s ease;
+  --font-mono: var(--tn-font-mono); --font-sans: var(--tn-font-sans); --font-kh: var(--tn-font-kh);
+}
+
+/* ── Tokyo Night (previous default), kept intact for opt-in dark surfaces ── */
+[data-theme="dark"] {
+  color-scheme: dark;
   --tn-bg: #0d0f14;
   --tn-surface: #161a23;
   --tn-surface-raised: #1a1f2b;
@@ -17,7 +130,7 @@
   --tn-radius-md: 8px;
   --tn-radius-lg: 12px;
   --tn-font-sans: var(--font-inter), Inter, system-ui, sans-serif;
-  --tn-font-kh: var(--font-khmer), "Noto Sans Khmer", sans-serif;
+  --tn-font-kh: var(--font-noto-khmer), "Noto Sans Khmer", sans-serif;
   --tn-font-mono: var(--font-mono-loaded), "JetBrains Mono", monospace;
   --bg-0: var(--tn-bg); --bg-1: var(--tn-surface); --bg-2: var(--tn-surface-raised); --bg-3: var(--tn-surface-hover);
   --surface: var(--tn-surface); --surface-hover: var(--tn-surface-hover); --border: var(--tn-border); --border-subtle: var(--tn-border);
@@ -26,4 +139,47 @@
   --success: var(--tn-green); --success-dim: color-mix(in srgb, var(--tn-green) 18%, transparent); --warning: var(--tn-yellow); --warning-dim: color-mix(in srgb, var(--tn-yellow) 18%, transparent); --error: var(--tn-red); --error-dim: color-mix(in srgb, var(--tn-red) 18%, transparent); --info: var(--tn-cyan);
   --radius: var(--tn-radius-md); --radius-sm: var(--tn-radius-sm); --radius-lg: var(--tn-radius-lg); --transition: .18s ease;
   --font-mono: var(--tn-font-mono); --font-sans: var(--tn-font-sans); --font-kh: var(--tn-font-kh);
+
+  /* TeleScripts tokens remapped so new primitives stay legible on dark surfaces */
+  --color-bg: var(--tn-bg);
+  --color-surface: var(--tn-surface);
+  --color-surface-tint: var(--tn-surface-raised);
+  --color-surface-dim: var(--tn-surface-hover);
+  --color-surface-low: var(--tn-surface-raised);
+  --color-surface-mid: var(--tn-surface-raised);
+  --color-surface-high: var(--tn-surface-hover);
+  --color-surface-highest: var(--tn-surface-hover);
+  --color-border: var(--tn-border);
+  --color-border-hover: var(--tn-blue);
+  --color-text-primary: var(--tn-text);
+  --color-text-secondary: var(--tn-text-muted);
+  --color-text-tertiary: var(--tn-text-subtle);
+  --color-text-variant: var(--tn-text-muted);
+  --color-accent-primary: var(--tn-blue);
+  --color-accent-strong: var(--tn-blue);
+  --color-accent-hover: var(--tn-cyan);
+  --color-accent-gradient: linear-gradient(135deg, var(--tn-blue) 0%, var(--tn-cyan) 100%);
+  --color-accent-surface: color-mix(in srgb, var(--tn-blue) 18%, transparent);
+  --color-accent-container: color-mix(in srgb, var(--tn-blue) 24%, transparent);
+  --color-success: var(--tn-green);
+  --color-success-strong: var(--tn-green);
+  --color-success-bg: color-mix(in srgb, var(--tn-green) 18%, transparent);
+  --color-success-container: color-mix(in srgb, var(--tn-green) 24%, transparent);
+  --color-success-on: var(--tn-green);
+  --color-warning: var(--tn-yellow);
+  --color-warning-bg: color-mix(in srgb, var(--tn-yellow) 18%, transparent);
+  --color-warning-container: color-mix(in srgb, var(--tn-yellow) 24%, transparent);
+  --color-warning-strong: var(--tn-yellow);
+  --color-error: var(--tn-red);
+  --color-error-bg: color-mix(in srgb, var(--tn-red) 18%, transparent);
+  --shadow-card: none;
+  --shadow-float: 0 6px 20px #0006;
+}
+
+/* A dark island paints its own canvas since <body> stays on the light theme. */
+[data-theme="dark"].theme-surface {
+  min-height: 100vh;
+  background: var(--bg-0);
+  color: var(--text-0);
+  font: 14px/1.5 var(--font-sans);
 }
