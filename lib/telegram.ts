@@ -36,7 +36,15 @@ export interface TelegramChat {
 async function call<T>(method: string, payload: Record<string, unknown> = {}): Promise<T> {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   if (!token) throw new TelegramError("TELEGRAM_BOT_TOKEN is not configured on the server");
+  return callBotApi<T>(token, method, payload);
+}
 
+/**
+ * Bot API call with an explicit token (manager bot, managed bots). Errors are
+ * Telegram's `description` or fixed strings — never the request URL, which
+ * embeds the token.
+ */
+export async function callBotApi<T>(token: string, method: string, payload: Record<string, unknown> = {}): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {

@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { api, type PaymentsConfig, type PlanSummary } from "@/lib/api";
-import { useLang } from "@/lib/i18n";
 import { ModelIcon } from "@/components/ModelIcon";
+import { Badge, Button, Field, Icon, Input, ListSkeleton, StateView } from "@/components/ui/primitives";
 
 type Step = 1 | 2 | 3;
 type Method = "aba" | "other-bank";
 
+const STEP_LABELS = ["ជ្រើសគម្រោង", "វិធីទូទាត់", "ទូទាត់"];
 const PLAN_ICONS: Record<string, string> = { free: "✦", pro: "◆", premium: "✧" };
-const PLAN_PITCH: Record<string, { kh: string; en: string }> = {
-  free: { kh: "ចាប់ផ្តើមសាកល្បង ៥ សំណើ/ថ្ងៃ", en: "Try it out — 5 requests/day" },
-  pro: { kh: "សម្រាប់ការងារប្រចាំថ្ងៃ ១០០ សំណើ/ថ្ងៃ", en: "For daily work — 100 requests/day" },
-  premium: { kh: "អ្វីៗទាំងអស់ ៥០០ សំណើ/ថ្ងៃ", en: "Everything unlocked — 500 requests/day" },
+const PLAN_PITCH: Record<string, string> = {
+  free: "ចាប់ផ្តើមសាកល្បង ៥ សំណើ/ថ្ងៃ",
+  pro: "សម្រាប់ការងារប្រចាំថ្ងៃ ១០០ សំណើ/ថ្ងៃ",
+  premium: "អ្វីៗទាំងអស់ ៥០០ សំណើ/ថ្ងៃ",
 };
 
 function modelsForTier(models: PaymentsConfig["models"], plan: PlanSummary) {
@@ -24,8 +25,7 @@ function modelsForTier(models: PaymentsConfig["models"], plan: PlanSummary) {
  * Plan price and allowed tiers always come from the server; the client only
  * picks ids. Premium shows "Coming soon" + waitlist when payments are off.
  */
-export function Subscription() {
-  const { t, lang } = useLang();
+export function Subscription({ currentPlan }: { currentPlan?: string | null }) {
   const [cfg, setCfg] = useState<PaymentsConfig | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [step, setStep] = useState<Step>(1);
@@ -41,7 +41,8 @@ export function Subscription() {
   const [waitDone, setWaitDone] = useState(false);
   const [waitBusy, setWaitBusy] = useState(false);
 
-  useEffect(() => {
+  function load() {
+    setLoadError(false);
     api
       .paymentsConfig()
       .then((c) => {
@@ -50,14 +51,14 @@ export function Subscription() {
         if (firstPaid) setPlanId(firstPaid);
       })
       .catch(() => setLoadError(true));
-  }, []);
+  }
+  useEffect(load, []);
 
-  if (loadError) return <div className="chat-error">{t("error")}</div>;
-  if (!cfg) return <div className="chat-loading"><div className="spinner" />{t("loading")}</div>;
+  if (loadError) return <StateView kind="error" onRetry={load} />;
+  if (!cfg) return <ListSkeleton rows={3} />;
 
   const plan = cfg.plans.find((p) => p.id === planId) || null;
   const needsWaitlist = !cfg.enabled && plan?.id !== "free";
-  const stepLabel = [t("stepPlan"), t("stepMethod"), t("stepPay")][step - 1];
 
   async function submit() {
     if (!plan || !receipt || !trxId.trim() || busy) return;
@@ -92,213 +93,108 @@ export function Subscription() {
   }
 
   return (
-    <div className="co-wrap" aria-label={t("subscription")}>
-      <div className="co-steps" aria-label={stepLabel}>
-        {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={`co-step ${step === s ? "active" : ""} ${step > s ? "done" : ""}`}
-          >
-            {s === 1 ? t("stepPlan") : s === 2 ? t("stepMethod") : t("stepPay")}
-          </div>
+    <div className="ts-stack" aria-label="គម្រោង">
+      <ol className="ts-steps" aria-label={STEP_LABELS[step - 1]}>
+        {STEP_LABELS.map((label, i) => (
+          <li key={label} className={`${step === i + 1 ? "active" : ""} ${step > i + 1 ? "done" : ""}`}>{label}</li>
         ))}
-      </div>
+      </ol>
 
-      {/* Step 1: plans */}
       {step === 1 && (
         <>
           {cfg.plans.map((p) => {
             const unlocked = modelsForTier(cfg.models, p);
-            const pitch = PLAN_PITCH[p.id] || { kh: p.label, en: p.label };
             return (
-              <button
-                key={p.id}
-                type="button"
-                className={`co-plan-row ${planId === p.id ? "selected" : ""}`}
-                aria-pressed={planId === p.id}
-                onClick={() => setPlanId(p.id)}
-              >
-                <span className="co-plan-icon" aria-hidden="true">
-                  {PLAN_ICONS[p.id] || "✦"}
+              <button key={p.id} type="button" className={`ts-select-row${planId === p.id ? " selected" : ""}`} aria-pressed={planId === p.id} onClick={() => setPlanId(p.id)}>
+                <span className="ts-tile ts-tile-sm ts-tile-accent" aria-hidden="true">{PLAN_ICONS[p.id] || "✦"}</span>
+                <span className="ts-select-main">
+                  <strong className="ts-row">{p.label} · {p.dailyLimit} សំណើ/ថ្ងៃ{currentPlan === p.id && <Badge tone="green">គម្រោងបច្ចុប្បន្ន</Badge>}</strong>
+                  <small>{PLAN_PITCH[p.id] || p.label}</small>
+                  {unlocked.length > 0 && (
+                    <span className="ts-model-chips">
+                      {unlocked.map((m) => <span key={m.id} className="ts-model-chip"><ModelIcon icon={m.icon} label={m.label} size={14} />{m.label}</span>)}
+                    </span>
+                  )}
                 </span>
-                <span className="co-plan-main">
-                  <strong>
-                    {p.label} · {p.dailyLimit} {t("perDay")}
-                  </strong>
-                  <small>{lang === "kh" ? pitch.kh : pitch.en}</small>
-                  <span className="co-chips">
-                    {unlocked.map((m) => (
-                      <span key={m.id} className="co-chip">
-                        <ModelIcon icon={m.icon} label={m.label} size={16} />
-                        {m.label}
-                      </span>
-                    ))}
-                  </span>
-                </span>
-                <span className="co-plan-price">
-                  <b>${p.priceUsd}/mo</b>
-                  {p.savePct > 0 && <span className="co-save">-{p.savePct}%</span>}
+                <span className="ts-select-price">
+                  <b>${p.priceUsd}/ខែ</b>
+                  {p.savePct > 0 && <Badge tone="green">-{p.savePct}%</Badge>}
                 </span>
               </button>
             );
           })}
-          <div className="co-sticky">
-            <button
-              type="button"
-              className="co-btn"
-              disabled={!plan || plan.priceUsd === 0}
-              onClick={() => (needsWaitlist ? setStep(3) : setStep(2))}
-            >
-              {plan?.priceUsd === 0 ? t("comingSoon") : `${t("continueBtn")} →`}
-            </button>
-          </div>
+          <Button block disabled={!plan || plan.priceUsd === 0} trailingIcon={plan?.priceUsd === 0 ? undefined : "arrowRight"} onClick={() => (needsWaitlist ? setStep(3) : setStep(2))}>
+            {plan?.priceUsd === 0 ? "ឆាប់ៗនេះ" : "បន្ត"}
+          </Button>
         </>
       )}
 
-      {/* Step 2: payment method (skipped when payments are off) */}
       {step === 2 && plan && !needsWaitlist && (
         <>
-          <button
-            type="button"
-            className={`co-method-row ${method === "aba" ? "selected" : ""}`}
-            onClick={() => setMethod("aba")}
-            aria-pressed={method === "aba"}
-          >
+          <button type="button" className={`ts-select-row${method === "aba" ? " selected" : ""}`} onClick={() => setMethod("aba")} aria-pressed={method === "aba"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/pay/aba.svg" alt="" aria-hidden="true" />
-            <span>
-              <strong>{t("abaMobile")}</strong>
-              <small>ABA Mobile · KHQR</small>
-            </span>
+            <img src="/assets/pay/aba.svg" alt="" aria-hidden="true" className="ts-pay-logo" />
+            <span className="ts-select-main"><strong>ABA Mobile</strong><small>ABA Mobile · KHQR</small></span>
           </button>
-          <button
-            type="button"
-            className={`co-method-row ${method === "other-bank" ? "selected" : ""}`}
-            onClick={() => setMethod("other-bank")}
-            aria-pressed={method === "other-bank"}
-          >
+          <button type="button" className={`ts-select-row${method === "other-bank" ? " selected" : ""}`} onClick={() => setMethod("other-bank")} aria-pressed={method === "other-bank"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/pay/khqr.svg" alt="" aria-hidden="true" />
-            <span>
-              <strong>{t("otherBanks")}</strong>
-              <small>KHQR · Bakong</small>
-            </span>
+            <img src="/assets/pay/khqr.svg" alt="" aria-hidden="true" className="ts-pay-logo" />
+            <span className="ts-select-main"><strong>ធនាគារផ្សេងទៀត</strong><small>KHQR · Bakong</small></span>
           </button>
-          <div className="co-sticky" style={{ display: "flex", gap: 8 }}>
-            <button type="button" className="co-btn co-btn-ghost" onClick={() => setStep(1)}>
-              {t("backBtn")}
-            </button>
-            <button type="button" className="co-btn" onClick={() => setStep(3)}>
-              {t("continueBtn")} →
-            </button>
+          <div className="ts-row">
+            <Button variant="secondary" icon="arrowLeft" onClick={() => setStep(1)}>ថយក្រោយ</Button>
+            <Button block trailingIcon="arrowRight" onClick={() => setStep(3)}>បន្ត</Button>
           </div>
         </>
       )}
 
-      {/* Step 3: pay */}
       {step === 3 && plan && !done && !needsWaitlist && (
         <>
-          <div className="co-pay-hero">
-            <small>{plan.label} · {t("scanPay")}</small>
-            <div className="co-price-hero">${plan.priceUsd}</div>
+          <div className="ts-pay-hero">
+            <small>{plan.label} · ស្កេនដើម្បីទូទាត់</small>
+            <div className="ts-pay-price">${plan.priceUsd}</div>
             {cfg.khqrImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="co-khqr" src={cfg.khqrImageUrl} alt="KHQR" />
+              <img className="ts-khqr" src={cfg.khqrImageUrl} alt="KHQR" />
             ) : (
-              <div className="co-khqr-empty">KHQR</div>
+              <div className="ts-khqr ts-khqr-empty">KHQR</div>
             )}
           </div>
-          <div className="co-field">
-            <span>
-              {t("payAmount")}: <b>${plan.priceUsd}</b>
-              <button
-                type="button"
-                className="integration-connect"
-                style={{ marginLeft: 8 }}
-                onClick={() => {
-                  navigator.clipboard?.writeText(String(plan.priceUsd)).catch(() => {});
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-              >
-                {copied ? t("copied") : t("copyBtn")}
-              </button>
-            </span>
+          <div className="ts-between ts-small">
+            <span>ចំនួនទឹកប្រាក់: <b>${plan.priceUsd}</b></span>
+            <Button size="sm" variant="ghost" icon={copied ? "check" : "copy"} onClick={() => { navigator.clipboard?.writeText(String(plan.priceUsd)).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
+              {copied ? "បានចម្លង" : "ចម្លង"}
+            </Button>
           </div>
-          <label className="co-field">
-            <span>{t("trxLabel")}</span>
-            <input
-              className="co-input"
-              value={trxId}
-              onChange={(e) => setTrxId(e.target.value)}
-              placeholder="TRX-…"
-              autoComplete="off"
-            />
-          </label>
-          <label className="co-field">
-            <span>{t("receiptLabel")} (PNG/JPG/WebP/PDF, max 5 MB)</span>
-            <input
-              className="co-input"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,application/pdf"
-              onChange={(e) => setReceipt(e.target.files?.[0] || null)}
-            />
-          </label>
-          {error && <div className="co-error">{error}</div>}
-          <div className="co-sticky" style={{ display: "flex", gap: 8 }}>
-            <button type="button" className="co-btn co-btn-ghost" onClick={() => setStep(2)}>
-              {t("backBtn")}
-            </button>
-            <button
-              type="button"
-              className="co-btn"
-              disabled={busy || !receipt || !trxId.trim()}
-              onClick={submit}
-            >
-              {busy ? t("loading") : t("submitPayment")}
-            </button>
+          <Field label="លេខប្រតិបត្តិការ (Transaction ID)"><Input value={trxId} onChange={(e) => setTrxId(e.target.value)} placeholder="TRX-…" autoComplete="off" /></Field>
+          <Field label="រូបភាពបង្កាន់ដៃ" hint="PNG/JPG/WebP/PDF, អតិបរមា 5 MB">
+            <Input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(e) => setReceipt(e.target.files?.[0] || null)} />
+          </Field>
+          {error && <div className="ts-error" role="alert">{error}</div>}
+          <div className="ts-row">
+            <Button variant="secondary" icon="arrowLeft" onClick={() => setStep(2)}>ថយក្រោយ</Button>
+            <Button block loading={busy} disabled={!receipt || !trxId.trim()} onClick={submit}>ផ្ញើការទូទាត់</Button>
           </div>
         </>
       )}
 
       {step === 3 && done && (
-        <div className="co-pending" role="status">
-          <span aria-hidden="true">⏳</span>
-          <div>{t("paymentPending")}</div>
-        </div>
+        <div className="ts-notice ts-row" role="status"><Icon name="clock" size={18} />បានទទួលការទូទាត់ — កំពុងរង់ចាំការផ្ទៀងផ្ទាត់ពីក្រុមការងារ។</div>
       )}
 
-      {/* Payments off: free tier or waitlist */}
       {needsWaitlist && plan && (
-        <div className="co-coming">
-          <div>🚧 {plan.label} — {t("comingSoon")}</div>
+        <div className="ts-warn ts-stack">
+          <strong>🚧 {plan.label} — ឆាប់ៗនេះ</strong>
           {waitDone ? (
-            <p className="co-note">✓</p>
+            <p className="ts-row"><Icon name="checkCircle" size={18} />បានចុះឈ្មោះក្នុងបញ្ជីរង់ចាំ</p>
           ) : (
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <input
-                className="co-input"
-                type="email"
-                value={waitEmail}
-                onChange={(e) => setWaitEmail(e.target.value)}
-                placeholder={t("waitlistPlaceholder")}
-              />
-              <button
-                type="button"
-                className="co-btn"
-                style={{ width: "auto" }}
-                disabled={waitBusy || !waitEmail.trim()}
-                onClick={joinWaitlist}
-              >
-                {t("waitlistJoin")}
-              </button>
+            <div className="ts-row">
+              <Input type="email" value={waitEmail} onChange={(e) => setWaitEmail(e.target.value)} placeholder="អ៊ីមែលរបស់អ្នក" aria-label="អ៊ីមែលរបស់អ្នក" />
+              <Button size="sm" loading={waitBusy} disabled={!waitEmail.trim()} onClick={joinWaitlist}>ចុះឈ្មោះ</Button>
             </div>
           )}
-          {step === 3 && (
-            <button type="button" className="co-btn co-btn-ghost" style={{ marginTop: 10 }} onClick={() => setStep(1)}>
-              {t("backBtn")}
-            </button>
-          )}
+          {error && <div className="ts-error" role="alert">{error}</div>}
+          {step === 3 && <Button size="sm" variant="secondary" icon="arrowLeft" onClick={() => setStep(1)}>ថយក្រោយ</Button>}
         </div>
       )}
     </div>

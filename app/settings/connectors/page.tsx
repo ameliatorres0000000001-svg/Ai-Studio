@@ -23,9 +23,7 @@ export default function ConnectorsPage() {
       </h1>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <GitHubConnectCard />
-        <div className="connector-card">
-          <TelegramConnector />
-        </div>
+        <TelegramConnector />
         <div className="connector-card">
           <div className="connector-head">
             <div className="connector-title">

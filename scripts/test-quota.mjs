@@ -25,6 +25,14 @@ const { outputText } = ts.transpileModule(src, {
 const module = { exports: {} };
 const shimRequire = (id) => {
   if (id === "@/config/models.json") return modelsJson;
+  if (id === "./admin") {
+    // lib/admin.ts is dependency-free; compile it the same way.
+    const adminSrc = fs.readFileSync(path.join(root, "lib/admin.ts"), "utf-8");
+    const adminJs = ts.transpileModule(adminSrc, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+    const m = { exports: {} };
+    new Function("require", "module", "exports", "process", adminJs)(require, m, m.exports, process);
+    return m.exports;
+  }
   return require(id);
 };
 new Function("require", "module", "exports", "process", outputText)(

@@ -8,6 +8,7 @@
 const crypto = require("crypto");
 const { sendMessage, answerCallbackQuery, sendInvoice, answerPreCheckoutQuery } = require("../lib/telegram");
 const config = require("../config/bot.json");
+const data = require("../lib/data");
 
 function t(km, en) {
   if (config.language === "en") return en;
@@ -98,6 +99,8 @@ async function handleOrderDetails(chatId, from, idx, detailsText) {
   );
 
   await sendPaymentStep(chatId, p, idx);
+
+  await data.addOrder({ customerId: from && from.id, product: p.name, amount: p.price, currency: p.currency, details: detailsText });
 
   const adminChatId = process.env.ADMIN_CHAT_ID;
   if (adminChatId) {
@@ -230,7 +233,13 @@ module.exports = async (req, res) => {
       const chatId = msg.chat.id;
       const text = (msg.text || "").trim();
 
-      if (text === "/start" || text === "/menu") {
+      const deepOrder = text.match(/^\/start order_(\d+)$/);
+      if (deepOrder) {
+        // Opened from the Mini App's "order" button.
+        await data.upsertCustomer(msg.from);
+        await handleOrderStart(chatId, Number(deepOrder[1]));
+      } else if (text === "/start" || text === "/menu") {
+        await data.upsertCustomer(msg.from);
         await handleStart(chatId);
       } else if (msg.successful_payment) {
         await handleSuccessfulPayment(chatId, msg.from, msg.successful_payment);

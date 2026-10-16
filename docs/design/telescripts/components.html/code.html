@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TeleScripts Agent - UI Component Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FAF9F6;
+      --surface: #FFFFFF;
+      --surface-tint: #F4F2EC;
+      --border: #E8E5DF;
+      --text: #2B2A27;
+      --text-muted: #6F6B63;
+      --accent: #3B527E;
+      --accent-bg: #EEF2F8;
+      --success: #5E9C76;
+      --warning: #C99A3E;
+      --error: #C65F5F;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Kantumruy Pro', 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 15px;
+      padding: 24px 16px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 22px; margin-bottom: 6px; font-weight: 700; }
+    h2 { font-size: 17px; margin: 28px 0 12px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+    .box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(43,42,39,0.02); }
+    
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: 9999px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; width: 100%; margin-bottom: 10px; }
+    .btn-primary { background: linear-gradient(135deg, #3B527E 0%, #4B6396 100%); color: #FAF9F6; }
+    .btn-secondary { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    .btn-ghost { background: transparent; color: var(--accent); }
+    .btn-danger { background: #FBEFEF; color: var(--error); border: 1px solid #F5D3D3; }
+
+    /* Inputs */
+    .input-field { width: 100%; min-height: 48px; border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; font-size: 15px; font-family: inherit; background: var(--surface); outline: none; margin-bottom: 10px; }
+    
+    /* Badges & Chips */
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 9999px; background: var(--surface); border: 1px solid var(--border); font-size: 14px; color: var(--text); cursor: pointer; margin: 4px; }
+    .chip.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 9999px; }
+    .badge-success { background: #EDF6F0; color: var(--success); }
+    .badge-warning { background: #FAF4E8; color: var(--warning); }
+    .badge-error { background: #FBEFEF; color: var(--error); }
+    
+    /* Chat bubbles */
+    .chat-bubble-ai { background: var(--surface); border: 1px solid var(--border); border-radius: 18px 18px 18px 4px; padding: 14px 16px; margin-bottom: 12px; }
+    .chat-bubble-user { background: var(--surface-tint); border: 1px solid var(--border); border-radius: 18px 18px 4px 18px; padding: 14px 16px; margin-bottom: 12px; text-align: right; }
+    
+    /* Timeline Step */
+    .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+    .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; }
+    .step-done { background: #EDF6F0; color: var(--success); }
+    .step-active { background: var(--accent-bg); color: var(--accent); }
+    
+    /* Segmented Control */
+    .seg-control { display: flex; background: var(--surface-tint); border-radius: 12px; padding: 3px; border: 1px solid var(--border); }
+    .seg-btn { flex: 1; text-align: center; padding: 8px; font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer; }
+    .seg-btn.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  </style>
+</head>
+<body>
+  <h1>បណ្ណាល័យ Component - TeleScripts</h1>
+  <p class="subtitle">Component & Interaction Patterns សម្រាប់ TeleScripts Agent UI (ភាសាខ្មែរ)</p>
+
+  <h2>1. ប៊ូតុងសកម្មភាព (Action Buttons)</h2>
+  <div class="box">
+    <button class="btn btn-primary">ប៊ូតុងចម្បង (Primary Button) 🚀</button>
+    <button class="btn btn-secondary">ប៊ូតុងបន្ទាប់បន្សំ (Secondary Button)</button>
+    <button class="btn btn-ghost">ប៊ូតុងធម្មតា (Ghost Button)</button>
+    <button class="btn btn-danger">ប៊ូតុងលុប / ព្រមាន (Danger)</button>
+  </div>
+
+  <h2>2. ផ្លាកសញ្ញាស្ថានភាព (Status Badges)</h2>
+  <div class="box">
+    <span class="badge badge-success">● ដំណើរការ (Active)</span>
+    <span class="badge badge-warning">● ព្រាង (Draft)</span>
+    <span class="badge badge-error">● ផ្អាក (Offline)</span>
+  </div>
+
+  <h2>3. បន្ទះជម្រើសរហ័ស (Quick Chips)</h2>
+  <div class="box">
+    <span class="chip active">Bot លក់ទំនិញ 🛍️</span>
+    <span class="chip">ឆ្លើយសំណួរ 24/7 💬</span>
+    <span class="chip">Bot កក់ម៉ោង 📅</span>
+    <span class="chip">Mini App 📱</span>
+  </div>
+
+  <h2>4. ពពុះសន្ទនា (Chat Bubbles)</h2>
+  <div class="box">
+    <div class="chat-bubble-ai">
+      🤖 <strong>AI TeleScripts:</strong> ជម្រាបសួរ! តើអ្នកចង់បង្កើត Bot សម្រាប់អាជីវកម្មអ្វីដែរ?
+    </div>
+    <div class="chat-bubble-user">
+      ខ្ញុំចង់បាន bot លក់សម្លៀកបំពាក់នារី និងគិតលុយតាម ABA KHQR។
+    </div>
+  </div>
+
+  <h2>5. បន្ទះប្តូរជម្រើស (Segmented Control)</h2>
+  <div class="box">
+    <div class="seg-control">
+      <div class="seg-btn active">ទិន្នន័យបញ្ជាទិញ</div>
+      <div class="seg-btn">ការកំណត់</div>
+      <div class="seg-btn">កំណត់ត្រា</div>
+    </div>
+  </div>
+
+  <h2>6. ប្រអប់បញ្ចូលទិន្នន័យ (Input Fields)</h2>
+  <div class="box">
+    <input type="text" class="input-field" placeholder="ប្រាប់ខ្ញុំថាអ្នកចង់បាន bot អ្វី...">
+  </div>
+</body>
+</html>

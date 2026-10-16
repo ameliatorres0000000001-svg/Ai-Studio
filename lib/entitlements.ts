@@ -186,3 +186,43 @@ export async function getUserPlan(userId: string): Promise<PlanInfo> {
     return { ...FREE_FALLBACK, expired: false };
   }
 }
+
+// ── Bot Builder: how many live/in-progress bots a plan may own ──────────────
+
+export const BOT_LIMITS: Record<string, number> = { free: 1, pro: 5, premium: 20 };
+
+export interface BotLimitResult {
+  allowed: boolean;
+  limit: number; // -1 = unlimited
+  used: number;
+  messageKh: string;
+  messageEn: string;
+}
+
+/** Pure: plan id + current bot count → decision. Admins are unlimited. */
+export function evaluateBotLimit(input: { planId: string; activeBots: number; isAdmin: boolean }): BotLimitResult {
+  if (input.isAdmin) return { allowed: true, limit: -1, used: input.activeBots, messageKh: "", messageEn: "" };
+  const limit = BOT_LIMITS[input.planId] ?? BOT_LIMITS.free;
+  if (input.activeBots >= limit) {
+    return {
+      allowed: false,
+      limit,
+      used: input.activeBots,
+      messageKh: `គម្រោងរបស់អ្នកអនុញ្ញាតឲ្យមាន Bot បាន ${limit} ប៉ុណ្ណោះ។ សូម Upgrade ដើម្បីបង្កើតបន្ថែម។`,
+      messageEn: `Your plan allows ${limit} bot(s). Upgrade to create more.`,
+    };
+  }
+  return { allowed: true, limit, used: input.activeBots, messageKh: "", messageEn: "" };
+}
+
+/** Live check against builder_projects (deleted projects do not count). */
+export async function checkBotLimit(userId: string, userEmail?: string): Promise<BotLimitResult> {
+  const { supabaseAdmin } = await import("./supabase-server");
+  const plan = await getUserPlan(userId);
+  const { count } = await supabaseAdmin
+    .from("builder_projects")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .neq("status", "deleted");
+  return evaluateBotLimit({ planId: plan.id, activeBots: count ?? 0, isAdmin: isAdminEmail(userEmail) });
+}
