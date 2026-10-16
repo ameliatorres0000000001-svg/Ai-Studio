@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html lang="km"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Kantumruy+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;font-family:'Kantumruy Pro','Inter',sans-serif;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,16px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"tertiary":"#503700","surface-bright":"#fdf9f4","surface-variant":"#e6e2dd","surface-container-lowest":"#ffffff","surface-tint":"#475e8b","on-secondary":"#ffffff","on-primary":"#ffffff","on-error":"#ffffff","surface-container-highest":"#e6e2dd","outline":"#747780","secondary":"#2c6a48","surface-container-low":"#f7f3ee","tertiary-fixed":"#ffdea7","primary-fixed-dim":"#afc7fa","tertiary-container":"#6d4d00","on-secondary-fixed":"#002110","inverse-primary":"#afc7fa","on-primary-fixed-variant":"#2f4672","surface-container-high":"#ece7e3","error-container":"#ffdad6","on-surface-variant":"#44474f","secondary-fixed":"#b0f1c6","background":"#fdf9f4","on-secondary-fixed-variant":"#0e5132","on-tertiary-container":"#f2bf5f","inverse-surface":"#31302d","surface-container":"#f1ede8","error":"#ba1a1a","primary-container":"#3b527e","primary":"#233b65","on-tertiary-fixed":"#271900","on-tertiary":"#ffffff","secondary-container":"#adeec3","surface":"#fdf9f4","on-primary-fixed":"#001a40","on-error-container":"#93000a","on-tertiary-fixed-variant":"#5e4200","on-surface":"#1c1c19","inverse-on-surface":"#f4f0eb","primary-fixed":"#d8e2ff","outline-variant":"#c4c6d0","on-background":"#1c1c19","tertiary-fixed-dim":"#f2bf5f","on-primary-container":"#afc6f9","on-secondary-container":"#306e4c","secondary-fixed-dim":"#94d5ab","surface-dim":"#ddd9d5"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"margin":"1rem","space-md":"1rem","space-lg":"1.5rem","space-xl":"2rem","space-xs":"0.25rem","space-sm":"0.5rem","gutter":"1rem"},fontFamily:{"body-md":["Inter","Kantumruy Pro"],"body-lg":["Inter","Kantumruy Pro"],"label-lg":["Inter","Kantumruy Pro"],"label-sm":["Inter","Kantumruy Pro"],"headline-lg":["Inter","Kantumruy Pro"],"label-md":["Inter","Kantumruy Pro"],"headline-md":["Inter","Kantumruy Pro"],"body-sm":["Inter","Kantumruy Pro"],"headline-lg-mobile":["Inter","Kantumruy Pro"]},fontSize:{"body-md":["15px",{lineHeight:"27px",fontWeight:"400"}],"body-lg":["17px",{lineHeight:"30px",fontWeight:"400"}],"label-lg":["15px",{lineHeight:"24px",fontWeight:"500"}],"label-sm":["11px",{lineHeight:"16px",fontWeight:"600"}],"headline-lg":["26px",{lineHeight:"38px",fontWeight:"600"}],"label-md":["13px",{lineHeight:"20px",fontWeight:"500"}],"headline-md":["19px",{lineHeight:"30px",fontWeight:"600"}],"body-sm":["14px",{lineHeight:"24px",fontWeight:"400"}],"headline-lg-mobile":["22px",{lineHeight:"34px",fontWeight:"600"}]}}}};</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface flex flex-col min-h-screen selection:bg-primary-fixed"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-space-md flex items-center justify-between max-w-xl mx-auto w-full"><div class="flex items-center gap-space-xs"><button aria-label="ត្រឡប់ក្រោយ" class="w-11 h-11 flex items-center justify-center rounded-full text-on-surface hover:bg-surface-variant transition-colors" onclick="history.back()" type="button"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><div class="flex flex-col"><h1 class="font-headline-md text-headline-md text-on-surface leading-snug">Bot Editor</h1><div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span><span class="font-label-sm text-label-sm text-on-surface-variant">TeleScripts Agent</span></div></div></div><div class="flex items-center gap-space-xs"><button aria-label="ជម្រើស" class="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">more_vert</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 w-full max-w-xl mx-auto pt-16 pb-safe px-space-md bg-surface flex flex-col"><div class="flex flex-col w-full pb-8">
+<!-- Live Ambient Build Status Banner -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-lowest p-space-md shadow-sm mb-space-md">
+<div class="flex items-start justify-between gap-space-sm relative z-10">
+<div class="flex items-center gap-space-sm">
+<div class="relative flex items-center justify-center w-12 h-12 rounded-full bg-primary-fixed text-primary">
+<span class="material-symbols-outlined text-[26px] animate-spin" style="animation-duration: 6s;">smart_toy</span>
+<span class="absolute top-0 right-0 w-3 h-3 bg-secondary rounded-full ring-2 ring-surface-container-lowest"></span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface leading-snug">AI កំពុងបង្កើត និងដំឡើង Bot...</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">schedule</span>
+            នៅសល់ប្រហែល <span class="font-label-md text-label-md text-on-surface font-semibold ml-1" id="countdown-timer">42</span> វិនាទី
+          </p>
+</div>
+</div>
+<div class="px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container text-right self-start shrink-0">
+<span class="font-label-sm text-label-sm font-semibold tracking-wide">60% រួចរាល់</span>
+</div>
+</div>
+<!-- Soft Progress Bar Container -->
+<div class="mt-4 pt-1 w-full relative z-10">
+<div class="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-primary-container rounded-full transition-all duration-1000 ease-out" style="width: 62%;"></div>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant">កំពុងដំណើរការជំហានទី ៣ ក្នុងចំណោម ៥</span>
+<span class="font-label-sm text-label-sm text-primary font-medium">ស្ថិរភាពប្រព័ន្ធខ្ពស់</span>
+</div>
+</div>
+<!-- Subtle Graphic Accent -->
+<div class="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-surface-container-high/40 pointer-events-none blur-2xl"></div>
+</div>
+<!-- Real-time Architecture Timeline Card -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm mb-space-md">
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">hub</span>
+<span class="font-label-lg text-label-lg text-on-surface">ដំណើរការសាងសង់តាមដំណាក់កាល</span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+        បច្ចុប្បន្នភាពផ្ទាល់
+      </span>
+</div>
+<div class="flex flex-col relative">
+<!-- Step 1: Done -->
+<div class="flex items-start gap-space-md relative pb-6">
+<div class="absolute top-7 left-4 -ml-[1px] w-[2px] h-[calc(100%-20px)] bg-secondary"></div>
+<div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 text-on-secondary shadow-sm z-10">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+<div class="flex-1 min-w-0 pt-0.5">
+<div class="flex items-center justify-between gap-2">
+<h3 class="font-label-lg text-label-lg text-on-surface font-semibold">ជំហានទី ១: រៀបចំរចនាសម្ព័ន្ធគម្រោង</h3>
+<span class="font-label-sm text-label-sm text-secondary bg-secondary-fixed/50 px-2 py-0.5 rounded-full">រួចរាល់</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Project Architecture &amp; Secure Environment Setup</p>
+</div>
+</div>
+<!-- Step 2: Done -->
+<div class="flex items-start gap-space-md relative pb-6">
+<div class="absolute top-7 left-4 -ml-[1px] w-[2px] h-[calc(100%-20px)] bg-secondary"></div>
+<div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 text-on-secondary shadow-sm z-10">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+<div class="flex-1 min-w-0 pt-0.5">
+<div class="flex items-center justify-between gap-2">
+<h3 class="font-label-lg text-label-lg text-on-surface font-semibold">ជំហានទី ២: បង្កើតមូលដ្ឋានទិន្នន័យផលិតផល</h3>
+<span class="font-label-sm text-label-sm text-secondary bg-secondary-fixed/50 px-2 py-0.5 rounded-full">រួចរាល់</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Database Schema &amp; Cloud Storage Provisioning</p>
+</div>
+</div>
+<!-- Step 3: Running (Active) -->
+<div class="flex items-start gap-space-md relative pb-6">
+<div class="absolute top-7 left-4 -ml-[1px] w-[2px] h-[calc(100%-20px)] bg-surface-variant"></div>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0 text-on-primary shadow-sm z-10 ring-4 ring-primary-fixed/40">
+<span class="material-symbols-outlined text-[18px] animate-spin">sync</span>
+</div>
+<div class="flex-1 min-w-0 pt-0.5">
+<div class="flex items-center justify-between gap-2">
+<h3 class="font-label-lg text-label-lg text-primary font-semibold">ជំហានទី ៣: សរសេរតក្កវិជ្ជា និងប្រព័ន្ធ Bot</h3>
+<span class="font-label-sm text-label-sm text-primary-fixed-dim bg-primary px-2 py-0.5 rounded-full font-medium">កំពុងដំណើរការ</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Bot Engine Logic &amp; NLP Processing</p>
+<div class="mt-2.5 p-2.5 rounded-lg bg-surface-container flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+<span class="font-label-md text-label-md text-on-surface leading-tight">កំពុងតភ្ជាប់ KHQR និងប្រព័ន្ធបញ្ជាទិញ...</span>
+</div>
+</div>
+</div>
+<!-- Step 4: Waiting -->
+<div class="flex items-start gap-space-md relative pb-6">
+<div class="absolute top-7 left-4 -ml-[1px] w-[2px] h-[calc(100%-20px)] bg-surface-variant"></div>
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center shrink-0 text-on-surface-variant shadow-none z-10">
+<span class="material-symbols-outlined text-[18px]">cloud_queue</span>
+</div>
+<div class="flex-1 min-w-0 pt-0.5 opacity-65">
+<div class="flex items-center justify-between gap-2">
+<h3 class="font-label-lg text-label-lg text-on-surface">ជំហានទី ៤: ដាក់ឲ្យដំណើរការលើ Cloud</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">រង់ចាំ</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Cloud Edge Deployment &amp; Webhook Link</p>
+</div>
+</div>
+<!-- Step 5: Waiting -->
+<div class="flex items-start gap-space-md relative">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center shrink-0 text-on-surface-variant shadow-none z-10">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+<div class="flex-1 min-w-0 pt-0.5 opacity-65">
+<div class="flex items-center justify-between gap-2">
+<h3 class="font-label-lg text-label-lg text-on-surface">ជំហានទី ៥: ធ្វើតេស្តសាកល្បងស្វ័យប្រវត្តិ</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">រង់ចាំ</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Automated Smoke Testing &amp; Safety Checks</p>
+</div>
+</div>
+</div>
+</div>
+<!-- AI Self-Healing Recovery Demonstration Block -->
+<div class="rounded-xl bg-surface-container-low p-space-md shadow-sm mb-space-md relative overflow-hidden">
+<div class="flex items-start gap-space-sm mb-3">
+<div class="w-9 h-9 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">health_and_safety</span>
+</div>
+<div>
+<h4 class="font-label-lg text-label-lg text-on-surface font-semibold">ប្រព័ន្ធជួសជុលបញ្ហាដោយស្វ័យប្រវត្តិ</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 leading-relaxed">
+          ប្រសិនបើមានបញ្ហារអាក់រអួល ប្រព័ន្ធ AI នឹងជួសជុល និងដោះស្រាយកំហុសស្វ័យប្រវត្តិភ្លាមៗ ដោយមិនបាច់រង់ចាំអ្នកបច្ចេកទេសឡើយ។
+        </p>
+</div>
+</div>
+<div class="flex items-center justify-end pt-1">
+<button class="w-full sm:w-auto px-4 py-2.5 rounded-full bg-surface-container-highest text-on-surface hover:bg-surface-variant transition-colors flex items-center justify-center gap-2 active:scale-95 duration-150" id="repair-button" onclick="triggerRepairFeedback()" type="button">
+<span class="material-symbols-outlined text-[18px] text-tertiary">build</span>
+<span class="font-label-md text-label-md font-medium">ឲ្យ AI ជួសជុលភ្លាមៗ 🛠️</span>
+</button>
+</div>
+<div class="hidden mt-3 p-2 rounded-lg bg-secondary-container text-on-secondary-container font-label-sm text-label-sm flex items-center gap-2" id="repair-toast">
+<span class="material-symbols-outlined text-[16px]">task_alt</span>
+<span>AI បានពិនិត្យប្រព័ន្ធរួចរាល់ ៖ គ្មានកំហុសកើតឡើងទេ! កំពុងដំណើរការយ៉ាងរលូន។</span>
+</div>
+</div>
+<!-- Collapsible Technical Details (Accordion) -->
+<div class="rounded-xl bg-surface-container-lowest shadow-sm overflow-hidden mb-space-md">
+<button aria-expanded="false" class="w-full px-space-md py-3.5 flex items-center justify-between text-left text-on-surface hover:bg-surface-container-low transition-colors" id="accordion-toggle" onclick="toggleLogs()" type="button">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">terminal</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">មើលលម្អិតបច្ចេកទេស (Technical Details)</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] transition-transform duration-200" id="accordion-icon">
+        expand_more
+      </span>
+</button>
+<div class="hidden px-space-md pb-4 pt-1 border-t-0 bg-surface-container-lowest" id="logs-panel">
+<div class="p-3 bg-surface-container-highest rounded-lg font-mono text-[12px] leading-relaxed flex flex-col gap-2 text-on-surface-variant">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span>✓ Cloud server provisioned in Singapore (24ms latency)</span>
+</div>
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span>✓ Telegram Webhook registered successfully</span>
+</div>
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span>✓ KHQR payment validator attached (Bakong API v2)</span>
+</div>
+<div class="flex items-center gap-2 text-primary font-semibold">
+<span class="material-symbols-outlined text-[14px] animate-spin">refresh</span>
+<span>→ Compiling catalog NLP model &amp; conversation routing...</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-[14px]">pending</span>
+<span>… Awaiting end-to-end sandbox handshake</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Helpful Hint Card -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[24px]">notifications_active</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+      អ្នកអាចបិទអេក្រង់នេះបាន។ យើងខ្ញុំនឹងផ្ញើសារជូនដំណឹងទៅកាន់ Telegram របស់អ្នកភ្លាមៗនៅពេល Bot ដំណើរការរួចរាល់!
+    </p>
+</div>
+</div>
+<script>
+  function toggleLogs() {
+    const panel = document.getElementById('logs-panel');
+    const icon = document.getElementById('accordion-icon');
+    const btn = document.getElementById('accordion-toggle');
+    if (!panel || !icon || !btn) return;
+
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+      panel.classList.remove('hidden');
+      icon.style.transform = 'rotate(180deg)';
+      btn.setAttribute('aria-expanded', 'true');
+    } else {
+      panel.classList.add('hidden');
+      icon.style.transform = 'rotate(0deg)';
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function triggerRepairFeedback() {
+    const toast = document.getElementById('repair-toast');
+    const btn = document.getElementById('repair-button');
+    if (!toast || !btn) return;
+
+    btn.disabled = true;
+    btn.classList.add('opacity-50');
+    toast.classList.remove('hidden');
+    
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.classList.remove('opacity-50');
+    }, 4000);
+  }
+
+  // Smooth Countdown Simulation
+  let remaining = 42;
+  const timerElement = document.getElementById('countdown-timer');
+  const timerInterval = setInterval(() => {
+    if (remaining > 18) {
+      remaining -= 1;
+      if (timerElement) {
+        timerElement.textContent = remaining;
+      }
+    } else {
+      clearInterval(timerInterval);
+    }
+  }, 2200);
+</script></main></body></html>
