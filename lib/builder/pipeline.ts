@@ -98,7 +98,7 @@ async function decryptRegistered(deps: BuilderDeps, payload: string | null, what
   return plain;
 }
 
-// ── Steps ───────────────────────────────────────────────────────────────────────────
+// ── Steps ───────────────────────────────────────────────────────────────────
 
 const STEP_IMPL: Record<StepName, (ctx: Ctx) => Promise<Outcome>> = {
   async requirements({ project }) {
@@ -285,7 +285,7 @@ const STEP_IMPL: Record<StepName, (ctx: Ctx) => Promise<Outcome>> = {
   },
 };
 
-// ── Engine ──────────────────────────────────────────────────────────────────────────
+// ── Engine ──────────────────────────────────────────────────────────────────
 
 /**
  * Runs (or resumes) one run from its current step. Returns the final run row,
