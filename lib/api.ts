@@ -16,6 +16,7 @@ import type {
 import { supabase } from "./supabase-client";
 import type { BotBuilderMessage, BotBuilderTurnResult, BotSpec } from "./bot-builder/types";
 import type { BotConfig } from "./bot-builder/config";
+import type { PublicEvent, PublicProject } from "./builder/types";
 
 async function getAuthToken(): Promise<string | null> {
   const {
@@ -364,4 +365,75 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ repo, config }),
     }),
+
+  // TeleScripts builder (real pipeline: Managed Bots → repo → data → Vercel → webhook).
+  builderList: () => fetchJson<{ projects: PublicProject[] }>("/api/builder/projects"),
+  builderCreate: (spec: BotSpec) =>
+    fetchJson<{ project: PublicProject }>("/api/builder/projects", { method: "POST", body: JSON.stringify({ spec }) }),
+  builderGet: (id: string) => fetchJson<{ project: PublicProject }>(`/api/builder/projects/${encodeURIComponent(id)}`),
+  builderStart: (id: string) =>
+    fetchJson<{ project: PublicProject }>(`/api/builder/projects/${encodeURIComponent(id)}/start`, { method: "POST" }),
+  builderRepair: (id: string) =>
+    fetchJson<{ run: { id: string; status: string; step: string } }>(`/api/builder/projects/${encodeURIComponent(id)}/repair`, { method: "POST" }),
+  builderSaveConfig: (id: string, config: unknown) =>
+    fetchJson<{ project: PublicProject; redeploying: boolean }>(`/api/builder/projects/${encodeURIComponent(id)}/config`, { method: "PUT", body: JSON.stringify({ config }) }),
+  builderData: (id: string) =>
+    fetchJson<{
+      orders: { id: string; created_at: string; product: string; amount: number | null; currency: string | null; status: string; customer_telegram_id: number | null }[];
+      customers: number;
+      products: number;
+      ordersToday: number;
+      events: { id: number; step: string; status: string; message: string; created_at: string }[];
+    }>(`/api/builder/projects/${encodeURIComponent(id)}/data`),
+  builderAgent: (id: string, instruction: string) =>
+    fetchJson<{ reply: string; actions: string[] }>(`/api/builder/projects/${encodeURIComponent(id)}/agent`, { method: "POST", body: JSON.stringify({ instruction }) }),
+  /** Downloads orders + customers as CSV (authenticated). */
+  builderExportCsv: async (id: string): Promise<Blob> => {
+    const res = await fetch(`/api/builder/projects/${encodeURIComponent(id)}/data?format=csv`, { headers: await authHeaders() });
+    if (!res.ok) await throwForStatus(res);
+    return res.blob();
+  },
+  /**
+   * Reads the SSE progress stream with fetch (EventSource cannot send the
+   * Bearer header). Resolves when the server ends the stream or `signal` aborts.
+   */
+  builderEvents: async (
+    id: string,
+    handlers: { onProgress?: (e: PublicEvent) => void; onState?: (p: PublicProject) => void },
+    signal?: AbortSignal,
+    after = 0
+  ): Promise<void> => {
+    const res = await fetch(`/api/builder/projects/${encodeURIComponent(id)}/events?after=${after}`, { headers: await authHeaders(), signal });
+    if (!res.ok || !res.body) await throwForStatus(res);
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let sep: number;
+      while ((sep = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        let event = "message";
+        let data = "";
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("event: ")) event = line.slice(7);
+          else if (line.startsWith("data: ")) data += line.slice(6);
+        }
+        if (!data) continue;
+        try {
+          const parsed = JSON.parse(data);
+          if (event === "progress") handlers.onProgress?.(parsed);
+          else if (event === "state") handlers.onState?.(parsed);
+        } catch {
+          /* ignore malformed chunk */
+        }
+      }
+    }
+  },
+  builderLimits: () => fetchJson<{ used: number; limit: number }>("/api/builder/limits"),
+  paymentHistory: () =>
+    fetchJson<{ payments: { id: string; plan_id: string; amount: number; method: string | null; status: "pending" | "approved" | "rejected"; created_at: string }[] }>("/api/payments/history"),
 };

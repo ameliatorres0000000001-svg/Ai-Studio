@@ -24,26 +24,8 @@ function ensureWorkspaceRoot(): void {
 
 // ─── Secrets hygiene ─────────────────────────────────────────
 
-/** Strip known secrets (and credentialed GitHub URLs) from any text before it leaves the server. */
-export function redactSecrets(text: string): string {
-  if (!text) return text;
-  let out = text.replace(/https:\/\/[^@\s/]+@github\.com/gi, "https://***@github.com");
-  // Telegram bot tokens look like 123456789:AA... and appear in API URLs as /bot<token>/.
-  out = out.replace(/\bbot\d{5,}:[A-Za-z0-9_-]{30,}/g, "bot***");
-  out = out.replace(/\b\d{5,}:[A-Za-z0-9_-]{30,}\b/g, "***");
-  for (const key of [
-    "GITHUB_ACCESS_TOKEN",
-    "CONNECTOR_ENCRYPTION_KEY",
-    "ANTHROPIC_API_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "VERCEL_TOKEN",
-    "TELEGRAM_BOT_TOKEN",
-  ]) {
-    const v = process.env[key];
-    if (v && v.length >= 8) out = out.split(v).join("***");
-  }
-  return out;
-}
+export { redactSecrets } from "./redact";
+import { redactSecrets } from "./redact";
 
 function stripCredentials(url: string): string {
   const u = new URL(url);
