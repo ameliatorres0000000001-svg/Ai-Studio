@@ -1,208 +1,140 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import type { Workspace, Activity, GitHubRepo } from "@/lib/types";
-import { useLang } from "@/lib/i18n";
-import { Button, StatusBadge, EmptyState, BrandIcon } from "@/components/ui";
+import { AppShell, Icon, SectionHeader, Textarea, Toast, useSpeechInput } from "@/components/ui/primitives";
+import { BotProjects, useBotProjects } from "@/components/BotProjects";
 
-type Tab = "Dashboard" | "Projects" | "Workspace" | "Subscription" | "Settings";
+const PROMPT_PLACEHOLDER = "ប្រាប់ខ្ញុំថាអ្នកចង់បាន bot អ្វី... (ឧទាហរណ៍៖ ខ្ញុំចង់បាន bot លក់កាហ្វេ និងទទួលការកុម្ម៉ង់)";
 
-interface Health {
-  github: boolean;
-  claude: boolean;
-  supabase: boolean;
-  vercel: boolean;
+const STARTERS = [
+  { emoji: "🛍️", title: "Bot លក់ទំនិញ", sub: "កាតាឡុកទំនិញ & គិតលុយ", prompt: "ខ្ញុំចង់បង្កើត Bot លក់ទំនិញតាម Telegram ដែលមានកាតាឡុក និងប្រព័ន្ធគិតលុយ ABA KHQR" },
+  { emoji: "💬", title: "ឆ្លើយសំណួរ 24/7", sub: "ឆ្លើយតបឆ្លាតវៃជាមួយ AI", prompt: "ខ្ញុំចង់បង្កើត Bot ឆ្លើយសំណួរអតិថិជន ២៤/៧ ដោយប្រើទិន្នន័យផលិតផលរបស់ខ្ញុំ" },
+  { emoji: "📅", title: "Bot កក់ម៉ោង", sub: "ណាត់ជួប និងកក់កន្លែង", prompt: "ខ្ញុំត្រូវការ Bot សម្រាប់ទទួលការកក់ម៉ោងសេវាកម្ម កំណត់ម៉ោងណាត់ជួប និងរំលឹកអតិថិជន" },
+  { emoji: "📱", title: "Telegram Mini App", sub: "ហាងទំនើបក្នុង Telegram", prompt: "បង្កើត Telegram Mini App ពេញលេញសម្រាប់ហាងទំនិញ ដោយមាន Cart និងបញ្ជាក់ទីតាំង" },
+];
+
+/** Brand header shared by the tab screens (Home, My bots, Help, Account). */
+export function BrandHeader() {
+  const [plan, setPlan] = useState<string | null>(null);
+  useEffect(() => { api.getUsage().then((u) => setPlan(u.plan)).catch(() => setPlan(null)); }, []);
+  return (
+    <header className="ui-topbar">
+      <div className="ui-topbar-inner">
+        <Link href="/" className="ts-brand" aria-label="TeleScripts">
+          <span className="ts-brand-mark"><Icon name="bot" size={22} /></span>
+          <span>
+            <span className="ts-brand-name" style={{ color: "var(--color-text-primary)" }}>TeleScripts{plan && plan !== "free" && <span className="ts-brand-plan">{plan.toUpperCase()}</span>}</span>
+            <span className="ts-brand-status"><span className="ui-status-dot ui-dot-green ui-pulse" />សកម្ម (Active)</span>
+          </span>
+        </Link>
+        <Link href="/settings" className="ts-avatar-link" aria-label="គណនី"><span className="ui-avatar" style={{ width: 32, height: 32 }}><Icon name="person" size={18} /></span></Link>
+      </div>
+    </header>
+  );
 }
 
-interface Usage {
-  plan: string;
-  dailyLimit: number;
-  unlimited?: boolean;
-  today: { requests: number; inputTokens: number; outputTokens: number };
-}
+/**
+ * 02 Home — prompt composer, voice input, 4 quick starters, recent projects.
+ * Submitting hands the prompt to the Builder chat (/bot-builder?prompt=…).
+ */
+export function Dashboard() {
+  const router = useRouter();
+  const [prompt, setPrompt] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const bots = useBotProjects();
+  const voice = useSpeechInput((text) => setPrompt((p) => (p ? `${p} ${text}` : text)), setToast);
+  const listening = voice.listening;
 
-/** Real dashboard: plan + usage bar, live connection dots, recent repos/activity. */
-export function DashboardView({
-  workspace,
-  workspaces,
-  onSelectWorkspace,
-  setTab,
-}: {
-  workspace: Workspace | null;
-  workspaces: Workspace[];
-  onSelectWorkspace: (ws: Workspace) => void;
-  setTab: (t: Tab) => void;
-}) {
-  const { t, lang } = useLang();
-  const [health, setHealth] = useState<Health | null>(null);
-  const [github, setGithub] = useState<{ configured: boolean; username?: string } | null>(null);
-  const [telegram, setTelegram] = useState<{ state: string; bot?: { username: string | null } } | null>(null);
-  const [usage, setUsage] = useState<Usage | null>(null);
-  const [activities, setActivities] = useState<Activity[] | null>(null);
-  const [repos, setRepos] = useState<GitHubRepo[] | null>(null);
+  function applyPrompt(text: string) {
+    setPrompt(text);
+    inputRef.current?.focus();
+    inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
-  useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null));
-    api.githubStatus().then(setGithub).catch(() => setGithub(null));
-    api.telegramStatus().then((s: any) => setTelegram(s)).catch(() => setTelegram(null));
-    api.getUsage().then(setUsage).catch(() => setUsage(null));
-    api.getActivities().then(({ activities }) => setActivities(activities.slice(0, 5))).catch(() => setActivities(null));
-    api.githubRepos().then(({ repos }) => setRepos(repos.slice(0, 5))).catch(() => setRepos([]));
-  }, []);
-
-  const dots: { id: string; label: string; icon: "github" | "claude" | "supabase" | "telegram" | "plug"; on: boolean; detail?: string }[] = [
-    { id: "github", label: "GitHub", icon: "github", on: !!health?.github, detail: github?.username },
-    { id: "models", label: "Models", icon: "claude", on: !!health?.claude },
-    { id: "supabase", label: "Supabase", icon: "supabase", on: !!health?.supabase },
-    { id: "telegram", label: "Telegram", icon: "telegram", on: telegram?.state === "connected", detail: (telegram as any)?.bot?.username },
-    { id: "vercel", label: "Vercel", icon: "plug", on: !!health?.vercel },
-  ];
-
-  const pct = usage && usage.dailyLimit > 0
-    ? Math.min(100, Math.round((usage.today.requests / usage.dailyLimit) * 100))
-    : 0;
+  function submit() {
+    const text = prompt.trim();
+    if (!text) { inputRef.current?.focus(); return; }
+    router.push(`/bot-builder?prompt=${encodeURIComponent(text)}`);
+  }
 
   return (
-    <>
-      <div className="hero">
-        <div>
-          <div className="hero-label">{t("subtitle")}</div>
-          <h1>{lang === "kh" ? "សាងសង់ កែសម្រួល និងបង្ហោះជាមួយ Coding Agent" : "Build, edit & deploy with Coding Agent."}</h1>
-          <p>{t("selectRepoDesc")}</p>
+    <AppShell header={<BrandHeader />}>
+      <section className="ts-greet">
+        <span className="ts-pill ts-pill-success"><Icon name="sparkles" size={16} />AI Bot Architect</span>
+        <h1>ជម្រាបសួរ! តើអ្នកចង់បង្កើត Bot អ្វីថ្ងៃនេះ?</h1>
+        <p>បង្កើត Telegram Bot ដោយមិនបាច់ចេះសរសេរកូដមួយជួរឡើយ។ ឆ្លើយតបរហ័ស និងវៃឆ្លាតបំផុត។</p>
+      </section>
+
+      <form className="ts-composer" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        <div className="ts-composer-top">
+          <span className="ts-tile ts-tile-tint"><Icon name="brain" size={20} /></span>
+          <Textarea
+            ref={inputRef}
+            bare
+            rows={3}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
+            placeholder={listening ? "កំពុងស្តាប់សម្លេងរបស់អ្នក... (និយាយឥឡូវនេះ)" : PROMPT_PLACEHOLDER}
+            aria-label="ប្រាប់ខ្ញុំថាអ្នកចង់បាន bot អ្វី"
+          />
         </div>
-        <Button onClick={() => setTab("Projects")}>{t("selectRepo")} →</Button>
+        <div className="ts-composer-actions">
+          <button type="button" className={`ts-mic${listening ? " listening" : ""}`} onClick={voice.toggle} aria-pressed={listening}>
+            <span className="ts-ping" aria-hidden="true" />
+            <Icon name="mic" size={19} />
+            <span>សម្លេង</span>
+          </button>
+          <div className="ts-row" style={{ gap: 4 }}>
+            {/* TODO(backend): file attachments for the builder are not supported by /api/bot-builder/chat yet. */}
+            <button type="button" className="ui-icon-btn" title="បន្ថែមឯកសារ" aria-label="បន្ថែមឯកសារ" onClick={() => setToast("ការភ្ជាប់ឯកសារនឹងមកដល់ឆាប់ៗនេះ។")}><Icon name="paperclip" size={22} /></button>
+            <button type="submit" className="ts-send" disabled={!prompt.trim()}><span>បង្កើត Bot</span><Icon name="arrowUp" size={18} /></button>
+          </div>
+        </div>
+      </form>
+
+      <div className="ts-values">
+        <span className="v1"><Icon name="codeOff" size={18} />0% កូដ</span><i aria-hidden="true" />
+        <span className="v2"><Icon name="bolt" size={18} />100% ស្វ័យប្រវត្តិ</span><i aria-hidden="true" />
+        <span className="v3"><Icon name="shield" size={18} />កម្មសិទ្ធិផ្តាច់មុខ</span>
       </div>
 
-      <div className="dashboard-grid">
-        <div className="panel">
-          <div className="panel-header">
-            <h3>{t("myPlan")}{usage ? ` · ${usage.plan.toUpperCase()}` : ""}</h3>
-            <Button variant="ghost" className="btn-sm" onClick={() => setTab("Subscription")}>
-              {t("getPlan")}
-            </Button>
-          </div>
-          {usage ? (
-            <div>
-              <small style={{ color: "var(--text-2)" }}>
-                {usage.unlimited ? (lang === "kh" ? "ការប្រើប្រាស់គ្មានកំណត់" : "Unlimited usage") : `${t("usedToday")}: ${usage.today.requests}/${usage.dailyLimit} ${t("requestsLabel")}`}
-              </small>
-              {!usage.unlimited && <div className="usage-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                <i style={{ width: `${pct}%` }} />
-              </div>}
-              <p style={{ marginTop: 8 }}>
-                {usage.today.inputTokens} in · {usage.today.outputTokens} out
-              </p>
-            </div>
-          ) : (
-            <p>{t("loading")}</p>
-          )}
+      <section className="ts-stack">
+        <SectionHeader icon="lightbulb" title="គំរូពេញនិយម (Quick Starters)" action={<span className="ts-micro ts-variant" style={{ fontWeight: 500 }}>ចុចដើម្បីជ្រើស</span>} />
+        <div className="ts-starters">
+          {STARTERS.map((s) => (
+            <button key={s.title} type="button" className="ts-starter" onClick={() => applyPrompt(s.prompt)}>
+              <b><span className="ts-emoji" aria-hidden="true">{s.emoji}</span><span>{s.title}</span></b>
+              <em>{s.sub}</em>
+            </button>
+          ))}
         </div>
+      </section>
 
-        <div className="panel">
-          <div className="panel-header">
-            <h3>{t("integrationStatus")}</h3>
-          </div>
-          <div className="status-dots">
-            {dots.map((d) => (
-              <div key={d.id} className="status-dot-row">
-                <span className={`dot ${d.on ? "on" : "off"}`} />
-                <span className="brand-icon-slot"><BrandIcon name={d.icon} size={16} /></span>
-                <span className="dot-row-label">{d.label}{d.detail ? ` · ${d.detail}` : ""}</span>
-                <small style={{ color: d.on ? "var(--success)" : "var(--text-3)" }}>
-                  {d.on ? t("connected_") : t("notConfigured")}
-                </small>
-              </div>
-            ))}
-          </div>
-        </div>
+      <section className="ts-stack">
+        <SectionHeader
+          icon="folder"
+          title="គម្រោងថ្មីៗរបស់អ្នក"
+          action={bots.state === "ready" && bots.projects.length > 0 ? <Link href="/bot-builder/bots" className="ts-link">មើលទាំងអស់ ({bots.projects.length.toLocaleString("km-KH")})</Link> : undefined}
+        />
+        <BotProjects {...bots} limit={2} />
+      </section>
 
-        <div className="panel">
-          <div className="panel-header">
-            <h3>{t("recentRepos")}</h3>
-            <Button variant="ghost" className="btn-sm" onClick={() => setTab("Projects")}>
-              {t("browseProjects")}
-            </Button>
-          </div>
-          {!repos ? (
-            <p>{t("loading")}</p>
-          ) : repos.length === 0 ? (
-            <EmptyState icon="◉" title={t("noProject")} description={t("selectRepoDesc")} />
-          ) : (
-            <div className="dash-workspace-list">
-              {repos.map((r) => {
-                const ws = workspaces.find((w) => w.repo_full_name === r.full_name);
-                return (
-                  <div key={r.id} className="row" style={{ cursor: ws ? "pointer" : "default" }} onClick={() => ws && onSelectWorkspace(ws)}>
-                    <span className="row-icon">◈</span>
-                    <span className="row-text">
-                      <b>{r.full_name}</b>
-                      <small>{t("branch")}: {r.default_branch}</small>
-                    </span>
-                    <em>{ws ? t("ready_") : ""}</em>
-                    <span className="row-tag">{r.private ? t("private") : t("public")}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      <section className="ts-community">
+        <div className="ts-stack" style={{ gap: 4 }}>
+          <small><Icon name="headset" size={18} />សហគមន៍កម្ពុជា</small>
+          <h4>ត្រូវការជំនួយបច្ចេកទេស?</h4>
+          {/* TODO(backend): real community size and Telegram channel link. */}
+          <p>ចូលរួមជាមួយអ្នកបង្កើត Bot ជាង 2,400 នាក់</p>
         </div>
+        <Link href="/help"><span>ចូលរួម</span><Icon name="send" size={16} /></Link>
+      </section>
 
-        <div className="panel">
-          <div className="panel-header">
-            <h3>{t("recentActivity")}</h3>
-          </div>
-          {!activities ? (
-            <p>{t("loading")}</p>
-          ) : activities.length === 0 ? (
-            <EmptyState icon="◷" title={t("noActivity")} description={t("noActivityDesc")} />
-          ) : (
-            <div className="activity-list">
-              {activities.map((a) => (
-                <div key={a.id} className="activity-row">
-                  <span className="activity-dot">●</span>
-                  <div className="activity-content">
-                    <b>{a.title}</b>
-                    <small>{new Date(a.created_at).toLocaleString()}</small>
-                  </div>
-                  <em className="activity-type">{a.type}</em>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="panel" style={{ gridColumn: "span 2" }}>
-          <div className="panel-header">
-            <h3>{t("quickStart")}</h3>
-          </div>
-          <div className="chat-actions">
-            {workspace && (
-              <Button variant="secondary" onClick={() => setTab("Workspace")}>
-                {t("openWorkspace")} →
-              </Button>
-            )}
-            <Button variant="secondary" onClick={() => setTab("Projects")}>
-              {t("selectProject")}
-            </Button>
-            <Button variant="secondary" onClick={() => setTab("Subscription")}>
-              {t("getPlan")}
-            </Button>
-          </div>
-          {workspace && (
-            <div className="dash-project-info" style={{ marginTop: 12 }}>
-              <div className="dash-project-name">{workspace.repo_full_name}</div>
-              <div className="dash-project-meta">
-                <span>{t("branch")}: {workspace.repo_default_branch}</span>
-                <StatusBadge
-                  status={workspace.status === "ready" ? "ready" : "idle"}
-                  label={workspace.status === "ready" ? t("ready_") : t("idle_")}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </>
+      <Toast open={!!toast} message={toast} onClose={() => setToast(null)} />
+    </AppShell>
   );
 }
