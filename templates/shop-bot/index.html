@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ហាង</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root { --bg: #FAF9F6; --surface: #FFFFFF; --border: #E8E5DF; --text: #2B2A27; --muted: #6F6B63; --accent: #3B527E; --success: #2C6A48; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font: 15px/1.75 "Kantumruy Pro", "Noto Sans Khmer", system-ui, sans-serif; padding: 16px 16px max(24px, env(safe-area-inset-bottom)); max-width: 480px; margin: 0 auto; }
+    h1 { font-size: 22px; line-height: 1.5; }
+    p.desc { color: var(--muted); margin-bottom: 16px; }
+    .item { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
+    .item div { flex: 1; min-width: 0; }
+    .item b { display: block; font-weight: 600; }
+    .item small { color: var(--muted); display: block; }
+    .price { color: var(--success); font-weight: 600; font-family: Inter, system-ui, sans-serif; }
+    button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 9999px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    .empty { color: var(--muted); text-align: center; padding: 32px 0; }
+  </style>
+</head>
+<body>
+  <h1 id="name">ហាង</h1>
+  <p class="desc" id="desc"></p>
+  <div id="list"><p class="empty">កំពុងផ្ទុក...</p></div>
+  <script>
+    // Mini App served from the bot's own deployment. Catalogue = config/bot.json;
+    // "កម្ម៉ង់" opens the bot chat with /start order_<n>, handled by api/webhook.js.
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg) { tg.ready(); tg.expand(); }
+    function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+    function price(p) { return p.currency === "KHR" ? Number(p.price).toLocaleString() + " ៛" : "$" + Number(p.price).toFixed(2); }
+    Promise.all([fetch("config/bot.json").then(function (r) { return r.json(); }), fetch("config/runtime.json").then(function (r) { return r.json(); }).catch(function () { return {}; })])
+      .then(function (res) {
+        var cfg = res[0], rt = res[1];
+        document.getElementById("name").textContent = cfg.botName || "ហាង";
+        document.getElementById("desc").textContent = cfg.description || "";
+        var list = document.getElementById("list");
+        var products = Array.isArray(cfg.products) ? cfg.products : [];
+        if (!products.length) { list.innerHTML = '<p class="empty">មិនទាន់មានទំនិញនៅឡើយទេ</p>'; return; }
+        list.innerHTML = products.map(function (p, i) {
+          return '<div class="item"><div><b>' + esc(p.name) + '</b><small>' + esc(p.description || "") + '</small><span class="price">' + esc(price(p)) + '</span></div><button data-i="' + i + '">កម្ម៉ង់</button></div>';
+        }).join("");
+        list.addEventListener("click", function (e) {
+          var i = e.target && e.target.getAttribute("data-i");
+          if (i == null || !rt.botUsername) return;
+          var url = "https://t.me/" + encodeURIComponent(rt.botUsername) + "?start=order_" + i;
+          if (tg && tg.openTelegramLink) { tg.openTelegramLink(url); tg.close(); } else { location.href = url; }
+        });
+      })
+      .catch(function () { document.getElementById("list").innerHTML = '<p class="empty">មិនអាចផ្ទុកបានទេ សូមព្យាយាមម្តងទៀត</p>'; });
+  </script>
+</body>
+</html>

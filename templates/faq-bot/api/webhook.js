@@ -8,6 +8,7 @@
 const crypto = require("crypto");
 const { sendMessage, answerCallbackQuery } = require("../lib/telegram");
 const config = require("../config/faq.json");
+const data = require("../lib/data");
 
 function t(km, en) {
   if (config.language === "en") return en;
@@ -140,6 +141,7 @@ module.exports = async (req, res) => {
       const text = (msg.text || "").trim();
 
       if (text === "/start" || text === "/menu") {
+        await data.upsertCustomer(msg.from);
         await handleStart(chatId);
       } else if (text && !text.startsWith("/")) {
         await handleText(chatId, text);
